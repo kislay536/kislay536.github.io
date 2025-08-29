@@ -8,67 +8,83 @@ category: work
 related_publications: false
 ---
 
-The verification of large, complex System-on-Chip (SoC) designs is a significant bottleneck in the hardware development lifecycle. Cycle-accurate simulations, while precise, are notoriously slow, often taking days or even weeks to complete for realistic test scenarios. This project, completed as part of Google Summer of Code, introduces **Metro-MPI**, a powerful tool integrated into the Verilator ecosystem to tackle this challenge by automating the process of parallel simulation.
+The verification of large, complex System-on-Chip (SoC) designs is a significant bottleneck in the hardware development lifecycle. Cycle-accurate simulations, while precise, are notoriously slow, often taking days or even weeks to complete for realistic test scenarios. This project, completed as part of **Google Summer of Code**, introduces **Metro-MPI**, a powerful tool integrated into the Verilator ecosystem to tackle this challenge by automating the process of parallel simulation.
 
-The core idea is to automatically partition a large hardware design into smaller, replicated modules and simulate each partition in parallel on a separate processor core using the Message Passing Interface (MPI). This can lead to a substantial reduction in overall simulation time, enabling more thorough verification in a shorter period.
+The core idea is to automatically partition a large hardware design into smaller, replicated modules and simulate each partition in parallel on a separate processor core using the **Message Passing Interface (MPI)**. This can lead to a substantial reduction in overall simulation time, enabling more thorough verification in a shorter period.
 
 <div class="row">
     <div class="col-sm mt-3 mt-md-0">
-        {% include figure.liquid loading="eager" path="assets/img/metro_mpi_flowchart.png" title="Metro-MPI High-Level Flow" class="img-fluid rounded z-depth-1" %}
+        {% include figure.liquid loading="eager" path="assets/img/mmpi-logo.png" title="Metro-MPI++" class="img-fluid rounded z-depth-1" %}
     </div>
     <div class="col-sm mt-3 mt-md-0">
-        {% include figure.liquid loading="eager" path="assets/img/partition_graph.png" title="Partition Identification" class="img-fluid rounded z-depth-1" %}
+        {% include figure.liquid loading="eager" path="assets/img/mmpi-raw-hierarchy.png" title="Raw Hierarchy Constructed" class="img-fluid rounded z-depth-1" %}
     </div>
     <div class="col-sm mt-3 mt-md-0">
-        {% include figure.liquid loading="eager" path="assets/img/generated_code.png" title="Automated Code Generation" class="img-fluid rounded z-depth-1" %}
+        {% include figure.liquid loading="eager" path="assets/img/mmpi-hashed-hierarchy.png" title="Hashed Hierarchy" class="img-fluid rounded z-depth-1" %}
+    </div>
+    <div class="col-sm mt-3 mt-md-0">
+        {% include figure.liquid loading="eager" path="assets/img/mmpi-weighted-hierarchhy.png" title="Weighted Hierarchy" class="img-fluid rounded z-depth-1" %}
+    </div>
+    <div class="col-sm mt-3 mt-md-0">
+        {% include figure.liquid loading="eager" path="assets/img/mmpi-connections.png" title="Connections in OpenPiton 2x1 configuration" class="img-fluid rounded z-depth-1" %}
     </div>
 </div>
 <div class="caption">
-    From left to right: A high-level diagram of the Metro-MPI analysis and code generation flow; a visualization of a design hierarchy with identified partitions (e.g., CPU tiles); and an example of the automatically generated C++/MPI code for communication.
+    From left to right: Metro-MPI workflow overview, partition graph for replicated modules, and generated MPI communication code.
 </div>
 
-### The Metro-MPI Automated Workflow
+### Metro-MPI Automated Workflow
 
-Metro-MPI is triggered by a custom command-line flag, `--mmpi-o1`, passed to a modified Verilator executable. This initiates a sophisticated, multi-stage process to prepare the design for parallel simulation.
+Metro-MPI is triggered by a custom command-line flag, `--mmpi-o1`, passed to a modified Verilator executable. It performs a multi-stage process:
 
-1.  **Hierarchy Analysis & Partition Identification:** The tool begins by creating an instance of `HierCellsGraphVisitor`, which traverses the entire design's Abstract Syntax Tree (AST). It builds a complete graph of the design hierarchy and computes a unique structural hash for each module instance. By searching for duplicate hashes, it can automatically identify replicated modules, which are ideal candidates for partitioning. For a complex design like OpenPiton, this process correctly identifies the RISC-V `tile` instances as the partitions.
+1. **Hierarchy Analysis & Partition Identification**  
+   * Traverses the entire design AST using `HierCellsGraphVisitor`.  
+   * Computes structural hashes for each module instance to detect replicated modules automatically.  
+   * Identifies RISC-V `tile` instances in OpenPiton as ideal partitions.
 
-2.  **Detailed Connectivity Analysis:** Once partitions are selected, the `PartitionPortAnalyzer` performs a deep analysis of every port on the partition boundary.
-    * **Data Gathering:** A `PortGatherVisitor` collects detailed information for every connection on the parent module, including the port direction for all instances, not just the partitions.
-    * **Driver/Load Classification:** The core of the analysis is a routine that correctly models the directed flow of data. For each partition port, it identifies whether it is an input or an output. If it's an input, it finds the single `output` port that drives it; if it's an output, it finds all the `input` ports that it drives (its loads). This crucial step correctly distinguishes true point-to-point data transfers from global signals like clocks and resets, preventing simulation errors.
+2. **Detailed Connectivity Analysis**  
+   * `PartitionPortAnalyzer` inspects all partition ports.  
+   * `PortGatherVisitor` gathers port direction and connection details.  
+   * Correctly models dataflow:  
+      - Inputs → driven by exactly one output.  
+      - Outputs → driving one or more inputs.  
+   * Filters global signals like clock/reset.
 
-3.  **Report and Code Generation:** The entire analysis is serialized to a `partition_report.json` file, which serves as the blueprint for code generation. Based on this report, a suite of generators creates a complete simulation environment:
-    * **Modified Verilog:** New Verilog files are created, including wrappers that replace the original partitions and "stub" modules that use DPI-C calls to interface with the C++ backend.
-    * **MPI Communication Layer:** A C++ file, `metro_mpi.cpp`, is generated, containing the MPI data structures, custom `MPI_Datatype`s, and send/receive functions tailored specifically to the design's communication patterns.
-    * **Simulation Drivers:** Standalone C++ `main()` files are created for each partition, which handle instantiating the Verilated module, managing the simulation loop, and calling the MPI communication functions.
-    * **System Harness:** A header file, `rank0_harness.h`, is generated for the main system simulation (MPI rank 0), providing the C++ implementation for the DPI-C functions called by the Verilog stubs.
-    * **Build System:** Makefiles are generated to automate the compilation of each partition into a standalone, MPI-enabled executable.
+3. **Report & Code Generation**  
+   * Outputs `partition_report.json` with connectivity details.  
+   * Generates:  
+     - Modified Verilog with partition stubs.  
+     - MPI C++ communication code.  
+     - Partition-specific simulation drivers.  
+     - `rank0_harness.h` for system-level harness.  
+     - Makefiles for building MPI executables.
 
-4.  **Exit:** With the `--mmpi-o1 --d1` flags, the tool's job is purely analysis and generation. After creating all the necessary files, it prints a confirmation message and exits, without performing a full, monolithic Verilation. The generated files are then used in a separate step to compile and run the parallel simulation using an MPI launcher like `mpirun`.
-
-### Case Study: Partitioning OpenPiton
-
-To validate the tool, it was run on the OpenPiton manycore processor design. The top-level module is `chip`, which instantiates two `tile` modules, `tile0` and `tile1`.
+4. **Exit Stage**  
+   * Analysis-only mode with `--mmpi-o1 --d1` generates files without full Verilation.  
+   * Parallel simulation runs later using `mpirun`.
 
 <div class="row justify-content-sm-center">
     <div class="col-sm-8 mt-3 mt-md-0">
-        {% include figure.liquid path="assets/img/json_report_snippet.png" title="Snippet of the generated partition_report.json" class="img-fluid rounded z-depth-1" %}
+        {% include figure.liquid path="assets/img/1.jpg" title="Generated partition_report.json snippet" class="img-fluid rounded z-depth-1" %}
     </div>
     <div class="col-sm-4 mt-3 mt-md-0">
-        {% include figure.liquid path="assets/img/openpiton_diagram.png" title="OpenPiton Tile Architecture" class="img-fluid rounded z-depth-1" %}
+        {% include figure.liquid path="assets/img/1.jpg" title="OpenPiton Tile Architecture" class="img-fluid rounded z-depth-1" %}
     </div>
 </div>
 <div class="caption">
-    Left: A snippet from the `partition_report.json` file generated by Metro-MPI for the OpenPiton `chip` design, showing the detailed analysis for a port on `tile0`. Right: A conceptual diagram of the OpenPiton architecture with its replicated tiles.
+    Left: Snippet from the generated `partition_report.json`. Right: OpenPiton architecture showing replicated tiles.
 </div>
 
-The tool successfully identified `tile0` and `tile1` as partitions and generated a detailed report of their connectivity. For example, it correctly identified the point-to-point NoC (Network-on-Chip) link between the two tiles:
+### Case Study: Partitioning OpenPiton
 
-* The output `dyn0_dEo` of `tile0` is the driver for the input `dyn0_dataIn_W` of `tile1`.
+On OpenPiton, Metro-MPI correctly identified two `tile` instances (`tile0`, `tile1`) as partitions.  
 
-The generated JSON report captures this relationship precisely, allowing the code generators to create the necessary MPI link between rank 1 (simulating `tile0`) and rank 2 (simulating `tile1`). Below is an example of the JSON output for a single port.
+For example, the point-to-point NoC link between them was captured precisely:  
 
-{% raw %}
+* Output `dyn0_dEo` of `tile0` → Input `dyn0_dataIn_W` of `tile1`.
+
+This relationship was encoded in JSON for MPI link generation:
+
 ```json
 {
   "port_name": "dyn0_dEo",
