@@ -451,8 +451,8 @@ ninja.data = [{
             },},{id: "news-a-simple-inline-announcement-with-markdown-emoji-sparkles-smile",
           title: 'A simple inline announcement with Markdown emoji! :sparkles: :smile:',
           description: "",
-          section: "News",},{id: "projects-metro-mpi-accelerating-verilog-simulations",
-          title: 'Metro-MPI: Accelerating Verilog Simulations',
+          section: "News",},{id: "projects-metro-mpi-accelerating-verilog-system-verilog-simulations",
+          title: 'Metro-MPI++: Accelerating Verilog/System Verilog Simulations',
           description: "A GSoC project to automatically partition and parallelize hardware simulations in Verilator using MPI.",
           section: "Projects",handler: () => {
               window.location.href = "/projects/Metro-MPI++/";
