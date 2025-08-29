@@ -455,7 +455,7 @@ ninja.data = [{
           title: 'Metro-MPI: Accelerating Verilog Simulations',
           description: "A GSoC project to automatically partition and parallelize hardware simulations in Verilator using MPI.",
           section: "Projects",handler: () => {
-              window.location.href = "/projects/1_project/";
+              window.location.href = "/projects/Metro-MPI++/";
             },},{
         id: 'social-email',
         title: 'email',
