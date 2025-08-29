@@ -17,40 +17,21 @@ related_publications: false
     Metro-MPI++
 </div>
 
-# Project Description
+## Project Description
 
 As modern SoC designs especially manycore-based ones get more and more complex, simulation performance becomes a serious bottleneck. RTL simulation is still the most accurate way to verify digital
 designs, but the traditional monolithic simulators don’t scale well when the design has a lot of replicated
 blocks like cores or NoC components. This often results in extremely long simulation times, which slows
 down development.
 
-Newer simulators do give us the option to do parallel simulation but they lack at one important aspect and that is they fail to give the Simulator(or the compiler that doees the parsing and AST construction) a perspective of the physical structure of the hardware design. Becasue of this, the preprocessing, AST Construction, elaboration and optimization follows a standard approach that a general purpose software language compiler like GCC follows. But unlike C and C++, HDLs carry much more information that are kind-of not visible to the GP compilers. An intuitive example would be the case of gem5, when we are modifying some structurs in gem5 let's say the O3 CPU model than it may happen that we are able to complete the building process of the binary of any architecture i.e. it doesn't throw any errors but despite this it may happen that it fails terribily during the run simulations. ANd this happens because of the same reason, that g++ doesn't know what this code represents and it does exactly the same thing it does with other c++ codes.
+Newer simulators do give us the option to do parallel simulation but they lack at one important aspect and that is they fail to give the Simulator(or the compiler that doees the parsing and AST construction) a perspective of the physical structure of the hardware design. Becasue of this, the preprocessing, AST Construction, elaboration and optimization follows a standard approach that a general purpose software language compiler like GCC follows. But unlike C and C++, HDLs carry much more information that are kind-of not visible to the GP compilers. An intuitive example would be the case of gem5, when we are modifying some structurs in gem5 let's say the O3 CPU model than it may happen that we are able to complete the building process of the binary of any architecture i.e. it doesn't throw any errors but despite this it may happen that it fails terribily during the run simulations. ANd this happens because of the same reason, that g++ doesn't know what this code represents and it does exactly the same thing it does with other c++ codes. Apart from this, the current parallel simulation frameworks lacks the ability to scale.
 
-To handle this, distributed simulation methods like Metro-MPI offer a much better alternative. By breaking the design into multiple partitions that run as different processes and communicate using MPI
-(Message Passing Interface), we can exploit the natural parallelism present in these manycore systems.
-The best part is we don’t lose cycle-level accuracy while doing this—and for large designs, it can speed
-up things significantly.
+To handle scaling issue, my mentors, Dr. Guillem and Prof. Jonathan have came up with a nice way of parallelizing RTL simulation of OpenPiton, [Metro-MPI](https://ieeexplore.ieee.org/abstract/document/10137080), by manually generating different binaries that can be simulated parallely on different threads across multiple nodes by exploiting the hardware boundaries like the NoC structures and by using Message Passing Interface.
 
-<div class="row">
-    <div class="col-sm mt-3 mt-md-0">
-        {% include figure.liquid loading="eager" path="assets/img/mmpi-logo.png" title="Metro-MPI++" class="img-fluid rounded z-depth-1" %}
-    </div>
-    <div class="col-sm mt-3 mt-md-0">
-        {% include figure.liquid loading="eager" path="assets/img/mmpi-raw-hierarchy.png" title="Raw Hierarchy Constructed" class="img-fluid rounded z-depth-1" %}
-    </div>
-    <div class="col-sm mt-3 mt-md-0">
-        {% include figure.liquid loading="eager" path="assets/img/mmpi-hashed-hierarchy.png" title="Hashed Hierarchy" class="img-fluid rounded z-depth-1" %}
-    </div>
-    <div class="col-sm mt-3 mt-md-0">
-        {% include figure.liquid loading="eager" path="assets/img/mmpi-weighted-hierarchhy.png" title="Weighted Hierarchy" class="img-fluid rounded z-depth-1" %}
-    </div>
-    <div class="col-sm mt-3 mt-md-0">
-        {% include figure.liquid loading="eager" path="assets/img/mmpi-connections.png" title="Connections in OpenPiton 2x1 configuration" class="img-fluid rounded z-depth-1" %}
-    </div>
-</div>
-<div class="caption">
-    From left to right: Metro-MPI workflow overview, partition graph for replicated modules, and generated MPI communication code.
-</div>
+In this project, Metro-MPI++, my goal was to take the same philosophy as in Metro-MPI and enable verilator, an open source system verilog simulator,-
+   * To automatically detect the possible partitions that can be simulated parallely.
+   * To extract as much information as possible about the connecting interface of these partitions to enable Verilator to take informed descisions.
+   * Generate intermediate files and structures needed to insert MPI to do parallel simulations.
 
 ### Metro-MPI Automated Workflow
 
