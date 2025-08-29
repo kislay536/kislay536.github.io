@@ -1,6 +1,6 @@
 ---
 layout: page
-title: 'Metro-MPI: Accelerating Verilog Simulations'
+title: 'Metro-MPI++: Accelerating Verilog/System Verilog Simulations'
 description: A GSoC project to automatically partition and parallelize hardware simulations in Verilator using MPI.
 img: assets/img/mmpi-logo.png
 importance: 1
@@ -8,9 +8,28 @@ category: work
 related_publications: false
 ---
 
-The verification of large, complex System-on-Chip (SoC) designs is a significant bottleneck in the hardware development lifecycle. Cycle-accurate simulations, while precise, are notoriously slow, often taking days or even weeks to complete for realistic test scenarios. This project, completed as part of **Google Summer of Code**, introduces **Metro-MPI**, a powerful tool integrated into the Verilator ecosystem to tackle this challenge by automating the process of parallel simulation.
+<div class="row">
+    <div class="col-sm mt-3 mt-md-0">
+        {% include figure.liquid loading="eager" path="assets/img/mmpi-logo.png" title="Metro-MPI++" class="img-fluid rounded z-depth-1" %}
+    </div>
+</div>
+<div class="caption">
+    Metro-MPI++
+</div>
 
-The core idea is to automatically partition a large hardware design into smaller, replicated modules and simulate each partition in parallel on a separate processor core using the **Message Passing Interface (MPI)**. This can lead to a substantial reduction in overall simulation time, enabling more thorough verification in a shorter period.
+# Project Description
+
+As modern SoC designs especially manycore-based ones get more and more complex, simulation performance becomes a serious bottleneck. RTL simulation is still the most accurate way to verify digital
+designs, but the traditional monolithic simulators don’t scale well when the design has a lot of replicated
+blocks like cores or NoC components. This often results in extremely long simulation times, which slows
+down development.
+
+Newer simulators do give us the option to do parallel simulation but they lack at one important aspect and that is they fail to give the Simulator(or the compiler that doees the parsing and AST construction) a perspective of the physical structure of the hardware design. Becasue of this, the preprocessing, AST Construction, elaboration and optimization follows a standard approach that a general purpose software language compiler like GCC follows. But unlike C and C++, HDLs carry much more information that are kind-of not visible to the GP compilers. An intuitive example would be the case of gem5, when we are modifying some structurs in gem5 let's say the O3 CPU model than it may happen that we are able to complete the building process of the binary of any architecture i.e. it doesn't throw any errors but despite this it may happen that it fails terribily during the run simulations. ANd this happens because of the same reason, that g++ doesn't know what this code represents and it does exactly the same thing it does with other c++ codes.
+
+To handle this, distributed simulation methods like Metro-MPI offer a much better alternative. By breaking the design into multiple partitions that run as different processes and communicate using MPI
+(Message Passing Interface), we can exploit the natural parallelism present in these manycore systems.
+The best part is we don’t lose cycle-level accuracy while doing this—and for large designs, it can speed
+up things significantly.
 
 <div class="row">
     <div class="col-sm mt-3 mt-md-0">
