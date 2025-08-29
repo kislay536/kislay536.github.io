@@ -2,7 +2,7 @@
 layout: page
 title: 'Metro-MPI: Accelerating Verilog Simulations'
 description: A GSoC project to automatically partition and parallelize hardware simulations in Verilator using MPI.
-img: assets/img/network_background.jpg
+img: assets/img/mmpi-logo.png
 importance: 1
 category: work
 related_publications: false
