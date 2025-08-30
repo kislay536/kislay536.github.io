@@ -78,11 +78,54 @@ This upgrade introduced several challenges due to major internal changes in Veri
 
 ## Automatic Partitioning and Connectivity Analysis
 
-The core of the Metro-MPI tool is its ability to automatically analyze a Verilog design to identify parallelizable sections and map their communication pathways. This process is handled by the `PartitionPortAnalyzer` and `HierCellsGraphVisitor` classes.
+The core of the Metro-MPI++ tool is its ability to automatically analyze a Verilog design to identify parallelizable sections and map their communication pathways. When Verilator is done constructing the Abstract Syntax Tree(AST), we are executing the `metro_mpi()` which is basically a function which is executing Metro-MPI++ using the constructed AST. The `metro_mpi()` function executes everything in stages, first entering the `V3Metro_MPI.h`  
 
 ### Automatic Partition Detection
 
-The tool does not require users to manually specify which modules to partition. It performs automatic detection by first building a complete hierarchical graph of the design using the `HierCellsGraphVisitor` class. It then traverses this graph and computes a Blake hash for each module's structural hierarchy. By searching for identical hashes, the tool can automatically and efficiently identify structurally identical, repeated module instances that are prime candidates for parallel simulation.
+The first and most critical step is to identify which parts of the hardware design are suitable for being partitioned and simulated in parallel. The framework employs a heuristic-based approach that identifies structurally identical, repeated module instances within the design hierarchy. This process is managed by the `HierCellsGraphVisitor` class.
+
+The detection algorithm operates as follows:
+
+  1. **Hierarchical Graph Construction**: The [visitor](https://en.wikipedia.org/wiki/Visitor_pattern) traverses the entire design Abstract Syntax Tree (AST), starting from the top-level module. It constructs a directed graph representing the module instantiation hierarchy. Each node in this graph corresponds to a module instance, and edges represent the parent-child relationship between instances. Key metadata is stored for each node, including its instance name, module name, and full hierarchical path. This graph acts as the foundation of further analysis and everything further depends on it.
+
+  <div class="row mt-3">
+      <div class="col-sm mt-3 mt-md-0">
+          {% include figure.liquid loading="eager" path="assets/img/mmpi-raw-hierarchy.png" class="img-fluid rounded z-depth-1" %}
+      </div>
+  </div>
+  <div class="caption">
+      The DAG representing the  hierarchy of OpenPiton 2x2 configuration. 
+  </div>
+
+  2. **Structural Hashing**: To identify structurally identical sub-hierarchies, a unique hash is generated for each node. This hash is not based on the instance name (e.g., $root.core_0), but on the hierarchical path of module types (e.g., $root.Top.Core). The system uses the [blake2b](https://en.wikipedia.org/wiki/BLAKE_(hash_function)#BLAKE2) algorithm for this purpose. This ensures that two instances, core_0 and core_1, both of type Core under a Top module, will produce the same hash, even though their instance paths are different. To add these hashes, we first do a DFS traversal and once we reached the lead node, basically a leaf module in AST, we calculated the hash of its module name(not instance name) and we do the same for all nodes in the same level, we got a 128 bit long hash for each name as `blake2b` takes variable size of input and produces hash of same length. Then as in DFS we go to the parent node, we computed the hash of parent module by operating the hash function on `<parent_module>.<child0_hash>.<child1_hash>.....<last_child_hash>` and this again gives hash of same length. So, by choosing `blake2b` we get a consistent hash for all nodes and by this way we are ensuring that if any two node has the same hash, then with 100% certainity we can say that the hierarchy below those nodes are exactly the same. Or, they represent a duplicate hardware block.
+
+  <div class="row mt-3">
+      <div class="col-sm mt-3 mt-md-0">
+          {% include figure.liquid loading="eager" path="assets/img/mmpi-hashed-hierarchy.png" class="img-fluid rounded z-depth-1" %}
+      </div>
+  </div>
+  <div class="caption">
+      This is the hashed version of the raw Hierarchy Graph. The nodes with same colour represents that they have the same hash and visually it is evident that the underlying hierarchy is also the same for those nodes. 
+  </div>
+
+  3. **Complexity Weighting or the Weight Model**: After assigining the hashes, it became easy to find the duplicate hierarchies but it didn't tell anything about the size of those hierarchies so we used a weight model which will basically assign weights to the nodes from which we can estimate the size of underlying hierarchy. The current weight model is simple and will work for any Hardware design which has a design similar to a manycore CPU but may not work for other types of design. And in those, case one just need to modify the weight model.  
+
+  <div class="row mt-3">
+      <div class="col-sm mt-3 mt-md-0">
+          {% include figure.liquid loading="eager" path="assets/img/mmpi-weighted-hierarchy.png" class="img-fluid rounded z-depth-1" %}
+      </div>
+  </div>
+  <div class="caption">
+      This is the hashed and weighted version of the raw Hierarchy Graph. The nodes with same colour represents that they have the same hash  and weight. 
+  </div>
+
+Partition Selection (BFS): With the graph built and weighted, a Breadth-First Search (BFS) is used to traverse the hierarchy level by level. At each level, the algorithm groups instances by their structural hash.
+
+If a hash appears more than once at a given level, it signifies the discovery of multiple, structurally identical instances that are candidates for partitioning.
+
+To select the best candidate set, the algorithm chooses the group of instances with the highest cumulative weight. This heuristic prioritizes partitioning the most complex or significant repeating structures in the design.
+
+Once this "best" group is identified, the algorithm designates their common module type as the partition module and outputs the list of instance names to be analyzed further.
 
 ### Detailed Connectivity Analysis
 
