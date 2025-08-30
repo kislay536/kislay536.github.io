@@ -119,13 +119,22 @@ The detection algorithm operates as follows:
       This is the hashed and weighted version of the raw Hierarchy Graph. The nodes with same colour represents that they have the same hash  and weight. 
   </div>
 
-Partition Selection (BFS): With the graph built and weighted, a Breadth-First Search (BFS) is used to traverse the hierarchy level by level. At each level, the algorithm groups instances by their structural hash.
+  4. **Partition Selection (BFS)**: With the graph built and weighted, a Breadth-First Search (BFS) is used to traverse the hierarchy level by level. At each level, the algorithm groups instances by their structural hash.
 
-If a hash appears more than once at a given level, it signifies the discovery of multiple, structurally identical instances that are candidates for partitioning.
+      - If a hash appears more than once at a given level, it signifies the discovery of multiple, structurally identical instances that are candidates for partitioning.
 
-To select the best candidate set, the algorithm chooses the group of instances with the highest cumulative weight. This heuristic prioritizes partitioning the most complex or significant repeating structures in the design.
+      - To select the best candidate set, the algorithm chooses the group of instances with the highest cumulative weight. This heuristic prioritizes partitioning the most complex or significant repeating structures in the design.
 
 Once this "best" group is identified, the algorithm designates their common module type as the partition module and outputs the list of instance names to be analyzed further.
+
+  <div class="row mt-3">
+      <div class="col-sm mt-3 mt-md-0">
+          {% include figure.liquid loading="eager" path="assets/img/mmpi-partition-result.png" class="img-fluid rounded z-depth-1" %}
+      </div>
+  </div>
+  <div class="caption">
+      Output when partition analysis was carried out on OpenPiton 2x2 configuration.
+  </div>
 
 ### Detailed Connectivity Analysis
 
