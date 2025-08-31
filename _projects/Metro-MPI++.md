@@ -138,7 +138,17 @@ Once this "best" group is identified, the algorithm designates their common modu
 
 ### Detailed Connectivity Analysis
 
-Once partition instances are identified, the `PartitionPortAnalyzer` class conducts a deep analysis of the parent module's netlist to understand the data flow.
+Once partition instances are identified, the `PartitionPortAnalyzer` class conducts a deep analysis of the parent module's netlist to understand the data flow. The reason why this step in important is because until we don't know which port of which module instance is connected to which peer, we woun't be able to make the MPI structures that will be used to carry the information across multiple processes/MPI ranks. 
+  <div class="row mt-3">
+      <div class="col-sm mt-3 mt-md-0">
+          {% include figure.liquid loading="eager" path="assets/img/mmpi-connections.png" class="img-fluid rounded z-depth-1" %}
+      </div>
+  </div>
+  <div class="caption">
+      Representation of chip module of OpenPiton 2x1 configuration. 
+  </div>
+This analysis also serves as an optimization that helps to reduce the data movement between MPI ranks during runtime. For example, It is evident fromt he above image that the 2 tiles are connected via vires which are defined in the chip module and inherently, the data should flow from tile0 to chip to tile1 and vice versa but we don't need the messages to pass through the chip module in case the 2 instances are communicating with each other. So to avoid this, this analysis tries to recursively look into the connections of each port of each module instances and tries to classify which ports are expecting data from which other ports, which of them are initialisation(just one time data movement) and which are of type "logic" i.e. the port is being driven by some logic inside the parent module(here, it is tile module). More details of this analysis is mentioned below:
+
 * It traces signals through chained `assign` statements using the `resolveWireChain` function to find the ultimate source wire for any given port connection.
 * It applies a sophisticated filtering logic that intelligently prioritizes true `Output` ports as data originators over passive, passthrough `assign` statements, resulting in a cleaner data-flow graph.
 * The analyzer is capable of finding the direction of ports on any instantiated module within the parent scope, whether it is a designated partition or not, by maintaining a map of instance names to their AST definitions (`m_instanceToModulePtr`).
