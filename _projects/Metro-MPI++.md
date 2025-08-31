@@ -86,7 +86,7 @@ The first and most critical step is to identify which parts of the hardware desi
 
 The detection algorithm operates as follows:
 
-  1. **Hierarchical Graph Construction**: The [visitor](https://en.wikipedia.org/wiki/Visitor_pattern) traverses the entire design Abstract Syntax Tree (AST), starting from the top-level module. It constructs a directed graph representing the module instantiation hierarchy. Each node in this graph corresponds to a module instance, and edges represent the parent-child relationship between instances. Key metadata is stored for each node, including its instance name, module name, and full hierarchical path. This graph acts as the foundation of further analysis and everything further depends on it.
+  * **Hierarchical Graph Construction**: The [visitor](https://en.wikipedia.org/wiki/Visitor_pattern) traverses the entire design Abstract Syntax Tree (AST), starting from the top-level module. It constructs a directed graph representing the module instantiation hierarchy. Each node in this graph corresponds to a module instance, and edges represent the parent-child relationship between instances. Key metadata is stored for each node, including its instance name, module name, and full hierarchical path. This graph acts as the foundation of further analysis and everything further depends on it.
 
   <div class="row mt-3">
       <div class="col-sm mt-3 mt-md-0">
@@ -97,7 +97,7 @@ The detection algorithm operates as follows:
       The DAG representing the  hierarchy of OpenPiton 2x2 configuration. 
   </div>
 
-  2. **Structural Hashing**: To identify structurally identical sub-hierarchies, a unique hash is generated for each node. This hash is not based on the instance name (e.g., \$root.core_0), but on the hierarchical path of module types (e.g., \$root.Top.Core). The system uses the [blake2b](https://en.wikipedia.org/wiki/BLAKE_(hash_function)#BLAKE2) algorithm for this purpose. This ensures that two instances, core_0 and core_1, both of type Core under a Top module, will produce the same hash, even though their instance paths are different. To add these hashes, we first do a DFS traversal and once we reached the lead node, basically a leaf module in AST, we calculated the hash of its module name(not instance name) and we do the same for all nodes in the same level, we got a 128 bit long hash for each name as `blake2b` takes variable size of input and produces hash of same length. Then as in DFS we go to the parent node, we computed the hash of parent module by operating the hash function on `<parent_module>.<child0_hash>.<child1_hash>.....<last_child_hash>` and this again gives hash of same length. So, by choosing `blake2b` we get a consistent hash for all nodes and by this way we are ensuring that if any two node has the same hash, then with 100% certainity we can say that the hierarchy below those nodes are exactly the same. Or, they represent a duplicate hardware block.
+  * **Structural Hashing**: To identify structurally identical sub-hierarchies, a unique hash is generated for each node. This hash is not based on the instance name (e.g., \$root.core_0), but on the hierarchical path of module types (e.g., \$root.Top.Core). The system uses the [blake2b](https://en.wikipedia.org/wiki/BLAKE_(hash_function)#BLAKE2) algorithm for this purpose. This ensures that two instances, core_0 and core_1, both of type Core under a Top module, will produce the same hash, even though their instance paths are different. To add these hashes, we first do a DFS traversal and once we reached the lead node, basically a leaf module in AST, we calculated the hash of its module name(not instance name) and we do the same for all nodes in the same level, we got a 128 bit long hash for each name as `blake2b` takes variable size of input and produces hash of same length. Then as in DFS we go to the parent node, we computed the hash of parent module by operating the hash function on `<parent_module>.<child0_hash>.<child1_hash>.....<last_child_hash>` and this again gives hash of same length. So, by choosing `blake2b` we get a consistent hash for all nodes and by this way we are ensuring that if any two node has the same hash, then with 100% certainity we can say that the hierarchy below those nodes are exactly the same. Or, they represent a duplicate hardware block.
 
   <div class="row mt-3">
       <div class="col-sm mt-3 mt-md-0">
@@ -108,7 +108,7 @@ The detection algorithm operates as follows:
       This is the hashed version of the raw Hierarchy Graph. The nodes with same colour represents that they have the same hash and visually it is evident that the underlying hierarchy is also the same for those nodes. 
   </div>
 
-  3. **Complexity Weighting or the Weight Model**: After assigining the hashes, it became easy to find the duplicate hierarchies but it didn't tell anything about the size of those hierarchies so we used a weight model which will basically assign weights to the nodes from which we can estimate the size of underlying hierarchy. The current weight model is simple and will work for any Hardware design which has a design similar to a manycore CPU but may not work for other types of design. And in those, case one just need to modify the weight model.  
+  * **Complexity Weighting or the Weight Model**: After assigining the hashes, it became easy to find the duplicate hierarchies but it didn't tell anything about the size of those hierarchies so we used a weight model which will basically assign weights to the nodes from which we can estimate the size of underlying hierarchy. The current weight model is simple and will work for any Hardware design which has a design similar to a manycore CPU but may not work for other types of design. And in those, case one just need to modify the weight model.  
 
   <div class="row mt-3">
       <div class="col-sm mt-3 mt-md-0">
@@ -119,7 +119,7 @@ The detection algorithm operates as follows:
       This is the hashed and weighted version of the raw Hierarchy Graph. The nodes with same colour represents that they have the same hash  and weight. 
   </div>
 
-  4. **Partition Selection (BFS)**: With the graph built and weighted, a Breadth-First Search (BFS) is used to traverse the hierarchy level by level. At each level, the algorithm groups instances by their structural hash.
+  * **Partition Selection (BFS)**: With the graph built and weighted, a Breadth-First Search (BFS) is used to traverse the hierarchy level by level. At each level, the algorithm groups instances by their structural hash.
 
       - If a hash appears more than once at a given level, it signifies the discovery of multiple, structurally identical instances that are candidates for partitioning.
 
