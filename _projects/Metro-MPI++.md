@@ -32,7 +32,35 @@ In this project, Metro-MPI++, my goal was to take the same philosophy as in Metr
 
 ## Metro-MPI++ Workflow
 
-I will be describing the entire plan here
+  <div class="row mt-3">
+      <div class="col-sm mt-3 mt-md-0">
+          {% include figure.liquid loading="eager" path="assets/img/verilation_process.png" class="img-fluid rounded z-depth-1" %}
+      </div>
+  </div>
+  <div class="caption">
+      Different Steps of Verilation Process
+  </div>
+
+To implement this idea in verilator, we need to first understand how exactly these RTL simulators particularly verilator works and what are the steps involved from start to the end. The most optimal place to implement this is just after the AST construction is completed as we can get all the information about the entire design from all modules from AST itself and before the elaboration step. We first tried to analyze the XML file that verilator outputs which contains information about the entire design in xml and found that it was sufficient to carry out our work and this xml file generation was solely done from the AST that's why we chose to do it after AST construction. 
+  <div class="row mt-3">
+      <div class="col-sm mt-3 mt-md-0">
+          {% include figure.liquid loading="eager" path="assets/img/actual-design.png" class="img-fluid rounded z-depth-1" %}
+      </div>
+      <div class="col-sm mt-3 mt-md-0">
+          {% include figure.liquid loading="eager" path="assets/img/current-design-flow.png" class="img-fluid rounded z-depth-1" %}
+      </div>
+  </div>
+  <div class="caption">
+      Actual Design and the Modified Design Flow
+  </div>
+For further explanation of the same, let's take the example of OpenPiton 2x2 configuration-
+
+  * First, we will do the analysis and find the possible top module of a partition.
+  * Second, we will find the ports that are involved in communication between partitions and with the system. Once, found will will also determine if they are active.
+  * Third, we plan to do the verilation of the detected partition seperately with a test bench having MPI functions compatible in communicating with other partitions and system.
+  * Fourth, We will generate the modified verilog files that will replace the old ones to introduce the DPI functions and the static rank identifier.
+  * Fifth, We will verilate the rank 0, the system design, seperately with the test bench same as early with minor modifications.
+  * Lastly, we will simulate the binaries in the classic MPI style execution. 
 
 ## Prerequisite: Migrating Metro MPI to Verilator v5.x
 
