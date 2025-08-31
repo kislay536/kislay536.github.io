@@ -147,7 +147,7 @@ Once partition instances are identified, the `PartitionPortAnalyzer` class condu
   <div class="caption">
       Representation of chip module of OpenPiton 2x1 configuration. 
   </div>
-This analysis also serves as an optimization that helps to reduce the data movement between MPI ranks during runtime. For example, It is evident fromt he above image that the 2 tiles are connected via vires which are defined in the chip module and inherently, the data should flow from tile0 to chip to tile1 and vice versa but we don't need the messages to pass through the chip module in case the 2 instances are communicating with each other. So to avoid this, this analysis tries to recursively look into the connections of each port of each module instances and tries to classify which ports are expecting data from which other ports, which of them are initialisation(just one time data movement) and which are of type "logic" i.e. the port is being driven by some logic inside the parent module(here, it is tile module). More details of this analysis is mentioned below:
+This analysis also serves as an optimization that helps to reduce the data movement between MPI ranks during runtime. For example, It is evident from the above image that the 2 tiles are connected via wires which are defined in the chip module and inherently, the data should flow from tile0 to chip to tile1 as wires are the part of chip  mmodule and vice versa but we don't need the messages to pass through the chip module in case the 2 instances are communicating with each other. So to avoid this, this analysis tries to recursively look into the connections of each port of each module instances and tries to classify which ports are expecting data from which other ports, which of them are initialisation(just one time data movement) and which are of type "logic" i.e. the port is being driven by some logic inside the parent module(here, it is chip module). More details of this analysis is mentioned below:
 
 * It traces signals through chained `assign` statements using the `resolveWireChain` function to find the ultimate source wire for any given port connection.
 * It applies a sophisticated filtering logic that intelligently prioritizes true `Output` ports as data originators over passive, passthrough `assign` statements, resulting in a cleaner data-flow graph.
@@ -155,9 +155,175 @@ This analysis also serves as an optimization that helps to reduce the data movem
 
 ### Global Uniqueness and Reporting
 
-To ensure the generated code is robust, the analyzer performs several finalization steps.
-* It conducts a global, link-aware name disambiguation phase at the end of the analysis. This process groups all signals by their communication link (e.g., all signals from rank 1 to rank 0) and renames any duplicate remote port names within that group to guarantee uniqueness.
-* The final, fully analyzed connectivity graph is serialized into a `partition_report.json` file. This JSON file acts as the central, authoritative source of information for all subsequent code generation stages.
+To ensure a functional and optimized parallel simulation, the framework must guarantee that every communicating process has a unique identifier and that the results of the connectivity analysis are captured in a clear, comprehensive, and usable format.
+
+#### Global Uniqueness: Deterministic MPI Rank Assignment
+
+A fundamental requirement for any MPI-based application is that each parallel process must have a unique integer identifier, known as its rank. The `PartitionPortAnalyzer` class establishes a globally unique and consistent ranking system before the main analysis begins.
+
+The assignment process is as follows:
+
+* System Rank: A special conceptual process named "system" is always assigned rank 0. This rank represents all non-partitioned logic, the top-level testbench, and any I/O external to the partitioned instances.
+
+* Deterministic Sorting: To ensure that the analysis is repeatable and stable, the list of discovered partition instance names is sorted alphabetically. This critical step prevents rank assignments from changing between different runs of the tool, which is essential for consistent builds.
+
+* Sequential Assignment: After sorting, the framework iterates through the list of partition instances and assigns them sequential, incremental ranks starting from 1 (e.g., 1, 2, 3, ...).
+
+* Centralized Mapping: These assignments are stored in a map (`m_mpiRankMap`), which serves as the single source of truth for retrieving the rank of any partition instance or the system process during the analysis. The final rank for each port and its communication partners is stored directly within the Port and CommunicationPartner data structures.
+
+The reason why we are introducing MPI ranks here even if the ranks are a runtime assignment/property is because by doing this we can correlate any identifier of the partitions with the rank as we can control the rank assignment and more importantly, it makes the generation of MPI strucutres and MPI send & recieve function very straight forward.  
+
+#### **Reporting for Analysis and Automation**
+
+The framework generates two distinct reports from the analysis data, one tailored for human review and the other for machine consumption by downstream automation tools.
+
+*  **Human-Readable Console Report (`printReport`)**
+    * This function prints a formatted table directly to the console for immediate user feedback and debugging.
+    * The report is organized by partition instance and lists every port.
+    * Key columns include the port's name, direction, width, its own assigned MPI rank and process name, and the classified communication type (`P2P`, `broadcast`, or `NULL`).
+    * Crucially, it provides formatted lists of remote partners, showing the specific instances, ports, MPI processes, and MPI ranks it communicates with, making the connectivity explicit and easy to verify.
+
+```txt
+Instance: tile0
+-------------------------------------------
+Port Name                 Direction  Width   Own Rank   Own MPI Process Comm Type    Remote Instance           Remote Port               Remote MPI Process   Remote MPI Rank
+clk                       in         1       1          tile0      P2P          [clock_mux]               [clk_muxed]               [system]             [0]
+rst_n                     in         1       1          tile0      P2P          [rst_sync]                [syncdata]                [system]             [0]
+clk_en                    in         1       1          tile0      NULL         []                        []                        []                   []
+default_chipid            in         14      1          tile0      NULL         []                        []                        []                   []
+default_coreid_x          in         8       1          tile0      NULL         []                        []                        []                   []
+default_coreid_y          in         8       1          tile0      NULL         []                        []                        []                   []
+default_total_num_tiles   in         32      1          tile0      NULL         []                        []                        []                   []
+flat_tileid               in         8       1          tile0      NULL         []                        []                        []                   []
+debug_req_i               in         1       1          tile0      NULL         []                        []                        []                   []
+unavailable_o             out        1       1          tile0      P2P          [chip]                    [logic_unavailable_o]     [system]             [0]
+timer_irq_i               in         1       1          tile0      NULL         []                        []                        []                   []
+ipi_i                     in         1       1          tile0      NULL         []                        []                        []                   []
+irq_i                     in         2       1          tile0      NULL         []                        []                        []                   []
+tile_jtag_ucb_val         out        1       1          tile0      NULL         []                        []                        []                   []
+tile_jtag_ucb_data        out        4       1          tile0      NULL         []                        []                        []                   []
+jtag_tiles_ucb_val        in         1       1          tile0      P2P          [jtag_port]               [jtag_tiles_ucb_val]      [system]             [0]
+jtag_tiles_ucb_data       in         4       1          tile0      P2P          [jtag_port]               [jtag_tiles_ucb_data]     [system]             [0]
+dyn0_dataIn_N             in         64      1          tile0      NULL         []                        []                        []                   []
+dyn0_dataIn_E             in         64      1          tile0      P2P          [tile1]                   [dyn0_dWo]                [tile1]              [2]
+dyn0_dataIn_W             in         64      1          tile0      P2P          [chip_from_intf_noc1_v2c] [data_out_dyn0_dataIn_W]  [system]             [0]
+dyn0_dataIn_S             in         64      1          tile0      P2P          [tile2]                   [dyn0_dNo]                [tile2]              [3]
+dyn0_validIn_N            in         1       1          tile0      NULL         []                        []                        []                   []
+dyn0_validIn_E            in         1       1          tile0      P2P          [tile1]                   [dyn0_dWo_valid]          [tile1]              [2]
+dyn0_validIn_W            in         1       1          tile0      P2P          [chip_from_intf_noc1_v2c] [valid_out_dyn0_validIn_W] [system]             [0]
+dyn0_validIn_S            in         1       1          tile0      P2P          [tile2]                   [dyn0_dNo_valid]          [tile2]              [3]
+dyn0_dNo_yummy            in         1       1          tile0      NULL         []                        []                        []                   []
+dyn0_dEo_yummy            in         1       1          tile0      P2P          [tile1]                   [dyn0_yummyOut_W]         [tile1]              [2]
+dyn0_dWo_yummy            in         1       1          tile0      P2P          [chip_to_intf_noc1_c2v]   [yummy_in_dyn0_dWo_yummy] [system]             [0]
+dyn0_dSo_yummy            in         1       1          tile0      P2P          [tile2]                   [dyn0_yummyOut_N]         [tile2]              [3]
+dyn0_dNo                  out        64      1          tile0      NULL         []                        []                        []                   []
+dyn0_dEo                  out        64      1          tile0      P2P          [tile1]                   [dyn0_dataIn_W]           [tile1]              [2]
+dyn0_dWo                  out        64      1          tile0      P2P          [chip]                    [logic_dyn0_dWo]          [system]             [0]
+dyn0_dSo                  out        64      1          tile0      P2P          [tile2]                   [dyn0_dataIn_N]           [tile2]              [3]
+dyn0_dNo_valid            out        1       1          tile0      NULL         []                        []                        []                   []
+dyn0_dEo_valid            out        1       1          tile0      P2P          [tile1]                   [dyn0_validIn_W]          [tile1]              [2]
+dyn0_dWo_valid            out        1       1          tile0      P2P          [chip]                    [logic_dyn0_dWo_valid]    [system]             [0]
+dyn0_dSo_valid            out        1       1          tile0      P2P          [tile2]                   [dyn0_validIn_N]          [tile2]              [3]
+dyn0_yummyOut_N           out        1       1          tile0      NULL         []                        []                        []                   []
+dyn0_yummyOut_E           out        1       1          tile0      P2P          [tile1]                   [dyn0_dWo_yummy]          [tile1]              [2]
+dyn0_yummyOut_W           out        1       1          tile0      P2P          [chip]                    [logic_dyn0_yummyOut_W]   [system]             [0]
+dyn0_yummyOut_S           out        1       1          tile0      P2P          [tile2]                   [dyn0_dNo_yummy]          [tile2]              [3]
+dyn1_dataIn_N             in         64      1          tile0      NULL         []                        []                        []                   []
+dyn1_dataIn_E             in         64      1          tile0      P2P          [tile1]                   [dyn1_dWo]                [tile1]              [2]
+dyn1_dataIn_W             in         64      1          tile0      P2P          [chip_from_intf_noc2_v2c] [data_out_dyn1_dataIn_W]  [system]             [0]
+dyn1_dataIn_S             in         64      1          tile0      P2P          [tile2]                   [dyn1_dNo]                [tile2]              [3]
+dyn1_validIn_N            in         1       1          tile0      NULL         []                        []                        []                   []
+dyn1_validIn_E            in         1       1          tile0      P2P          [tile1]                   [dyn1_dWo_valid]          [tile1]              [2]
+dyn1_validIn_W            in         1       1          tile0      P2P          [chip_from_intf_noc2_v2c] [valid_out_dyn1_validIn_W] [system]             [0]
+dyn1_validIn_S            in         1       1          tile0      P2P          [tile2]                   [dyn1_dNo_valid]          [tile2]              [3]
+dyn1_dNo_yummy            in         1       1          tile0      NULL         []                        []                        []                   []
+dyn1_dEo_yummy            in         1       1          tile0      P2P          [tile1]                   [dyn1_yummyOut_W]         [tile1]              [2]
+dyn1_dWo_yummy            in         1       1          tile0      NULL         []                        []                        []                   []
+dyn1_dSo_yummy            in         1       1          tile0      P2P          [tile2]                   [dyn1_yummyOut_N]         [tile2]              [3]
+dyn1_dNo                  out        64      1          tile0      NULL         []                        []                        []                   []
+dyn1_dEo                  out        64      1          tile0      P2P          [tile1]                   [dyn1_dataIn_W]           [tile1]              [2]
+dyn1_dWo                  out        64      1          tile0      P2P          [chip]                    [logic_dyn1_dWo]          [system]             [0]
+dyn1_dSo                  out        64      1          tile0      P2P          [tile2]                   [dyn1_dataIn_N]           [tile2]              [3]
+dyn1_dNo_valid            out        1       1          tile0      NULL         []                        []                        []                   []
+dyn1_dEo_valid            out        1       1          tile0      P2P          [tile1]                   [dyn1_validIn_W]          [tile1]              [2]
+dyn1_dWo_valid            out        1       1          tile0      P2P          [chip]                    [logic_dyn1_dWo_valid]    [system]             [0]
+dyn1_dSo_valid            out        1       1          tile0      P2P          [tile2]                   [dyn1_validIn_N]          [tile2]              [3]
+dyn1_yummyOut_N           out        1       1          tile0      NULL         []                        []                        []                   []
+dyn1_yummyOut_E           out        1       1          tile0      P2P          [tile1]                   [dyn1_dWo_yummy]          [tile1]              [2]
+dyn1_yummyOut_W           out        1       1          tile0      P2P          [chip]                    [logic_dyn1_yummyOut_W]   [system]             [0]
+dyn1_yummyOut_S           out        1       1          tile0      P2P          [tile2]                   [dyn1_dNo_yummy]          [tile2]              [3]
+dyn2_dataIn_N             in         64      1          tile0      NULL         []                        []                        []                   []
+dyn2_dataIn_E             in         64      1          tile0      P2P          [tile1]                   [dyn2_dWo]                [tile1]              [2]
+dyn2_dataIn_W             in         64      1          tile0      NULL         []                        []                        []                   []
+dyn2_dataIn_S             in         64      1          tile0      P2P          [tile2]                   [dyn2_dNo]                [tile2]              [3]
+dyn2_validIn_N            in         1       1          tile0      NULL         []                        []                        []                   []
+dyn2_validIn_E            in         1       1          tile0      P2P          [tile1]                   [dyn2_dWo_valid]          [tile1]              [2]
+dyn2_validIn_W            in         1       1          tile0      NULL         []                        []                        []                   []
+dyn2_validIn_S            in         1       1          tile0      P2P          [tile2]                   [dyn2_dNo_valid]          [tile2]              [3]
+dyn2_dNo_yummy            in         1       1          tile0      NULL         []                        []                        []                   []
+dyn2_dEo_yummy            in         1       1          tile0      P2P          [tile1]                   [dyn2_yummyOut_W]         [tile1]              [2]
+dyn2_dWo_yummy            in         1       1          tile0      P2P          [chip_to_intf_noc3_c2v]   [yummy_in_dyn2_dWo_yummy] [system]             [0]
+dyn2_dSo_yummy            in         1       1          tile0      P2P          [tile2]                   [dyn2_yummyOut_N]         [tile2]              [3]
+dyn2_dNo                  out        64      1          tile0      NULL         []                        []                        []                   []
+dyn2_dEo                  out        64      1          tile0      P2P          [tile1]                   [dyn2_dataIn_W]           [tile1]              [2]
+dyn2_dWo                  out        64      1          tile0      P2P          [chip]                    [logic_dyn2_dWo]          [system]             [0]
+dyn2_dSo                  out        64      1          tile0      P2P          [tile2]                   [dyn2_dataIn_N]           [tile2]              [3]
+dyn2_dNo_valid            out        1       1          tile0      NULL         []                        []                        []                   []
+dyn2_dEo_valid            out        1       1          tile0      P2P          [tile1]                   [dyn2_validIn_W]          [tile1]              [2]
+dyn2_dWo_valid            out        1       1          tile0      P2P          [chip]                    [logic_dyn2_dWo_valid]    [system]             [0]
+dyn2_dSo_valid            out        1       1          tile0      P2P          [tile2]                   [dyn2_validIn_N]          [tile2]              [3]
+dyn2_yummyOut_N           out        1       1          tile0      NULL         []                        []                        []                   []
+dyn2_yummyOut_E           out        1       1          tile0      P2P          [tile1]                   [dyn2_dWo_yummy]          [tile1]              [2]
+dyn2_yummyOut_W           out        1       1          tile0      P2P          [chip]                    [logic_dyn2_yummyOut_W]   [system]             [0]
+dyn2_yummyOut_S           out        1       1          tile0      P2P          [tile2]                   [dyn2_dNo_yummy]          [tile2]              [3]
+```
+
+*  **Machine-Readable JSON Report (`writeJsonReport`)**
+    * This function is the primary output for the entire analysis pipeline, serializing the results into a structured JSON file named `metro_mpi/partition_report.json`.
+    * This file serves as a standardized data interchange format for subsequent code generation steps, such as creating MPI wrappers, C++ drivers, and Makefiles.
+    * The JSON structure is hierarchical, with a top-level `partitions` object containing entries for each analyzed instance. Each instance contains a detailed array of its ports.
+    * Each port object in the JSON is comprehensive, containing fields for:
+        * Basic properties: `port_name`, `direction`, `width`.
+        * Connection details: `active`, `type`, `connecting_wire`.
+        * MPI Identity: Its own `mpi_process` and `mpi_rank`.
+        * Communication Profile: The `Comm` field, indicating the communication type (`P2P`, `broadcast`, etc.).
+        * Partner List: A `with_whom_is_it_communicating` array, which contains a list of objects, each detailing a remote partner's `instance`, `port`, `mpi_process`, and `mpi_rank`.
+
+    ```json
+    {
+      "partitions": {
+        "tile0": [
+          {
+            "port_name": "clk",
+            "direction": "in",
+            "width": 1,
+            "active": "Yes",
+            "type": "wire",
+            "connecting_wire": "clk_muxed",
+            "mpi_process": "tile0",
+            "mpi_rank": 1,
+            "Comm": "P2P",
+            "with_whom_is_it_communicating": [{"instance": "clock_mux", "port": "clk_muxed", "mpi_process": "system", "mpi_rank": 0}]
+          },
+          ....
+
+          {
+            "port_name": "dyn0_dEo",
+            "direction": "out",
+            "width": 64,
+            "active": "Yes",
+            "type": "wire",
+            "connecting_wire": "tile_0_0_out_E_noc1_data",
+            "mpi_process": "tile0",
+            "mpi_rank": 1,
+            "Comm": "P2P",
+            "with_whom_is_it_communicating": [{"instance": "tile1", "port": "dyn0_dataIn_W", "mpi_process": "tile1", "mpi_rank": 2}]
+          },
+          ....],
+        "tile1": [.....]
+      }
+    }
+    ```
 
 ## Verilog Rewriting for MPI Integration
 
@@ -215,3 +381,4 @@ The `MakefileGenerator` intelligently parses the original Verilator command line
 ### MPI Compiler Integration
 
 Crucially, the generated `Makefile` is configured to use an MPI C++ compiler wrapper (e.g., `mpic++`) for the compilation and linking stages. This guarantees that the final executable is correctly linked against the necessary MPI libraries, enabling it to participate in the distributed simulation.
+
