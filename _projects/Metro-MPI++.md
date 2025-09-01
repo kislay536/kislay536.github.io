@@ -467,6 +467,6 @@ The `MakefileGenerator`, being a core component of an MPI-centric tool, is desig
 
 We can see the repo that I worked on-
 
-verilator - [here](https://github.com/metro-mpi/verilator/tree/metro-mpi)
+verilator - [here](https://github.com/metro-mpi/verilator)
 
 Metro-MPI - [here](https://github.com/metro-mpi/metro-mpi-private.git)
