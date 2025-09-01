@@ -469,4 +469,4 @@ We can see the repo that I worked on-
 
 verilator - [here](https://github.com/metro-mpi/verilator)
 
-Metro-MPI - [here](https://github.com/metro-mpi/metro-mpi-private.git)
+Metro-MPI - [here](https://github.com/metro-mpi/metro-mpi-private/tree/metro_mpi_kislay)
