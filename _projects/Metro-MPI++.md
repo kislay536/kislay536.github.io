@@ -16,21 +16,21 @@ related_publications: false
 
 # Project Description
 
-As modern SoC designs get more and more complex, especially manycore-based ones, simulation performance becomes a serious bottleneck. RTL simulation is still the most accurate way to verify digital
-designs, but the traditional monolithic simulators don’t scale well when the design has many replicated hardware
-blocks like cores or NoC components. This often results in extremely long simulation times, which slows
-down the development design cycle.
+As modern SoC designs get more and more complex, especially manycore-based ones, simulation performance becomes a serious bottleneck. RTL simulation is still the most accurate way to verify digital designs, but the traditional monolithic simulators don’t scale well when the design has many replicated hardware blocks like cores or NoC components. This often results in extremely long simulation times, which slows down the development design cycle.
 
-Newer simulators do give us the option to do parallel simulation but they lack one important aspect and that is they fail to give the Simulator(or the compiler that does the parsing and AST construction) a perspective of the physical structure of the hardware design. Because of this, the preprocessing, AST Construction, elaboration and optimization follows a standard approach that a general-purpose software language compiler like GCC follows. However, unlike C and C++, HDLs carry much more information that are not visible to the general-purpose compilers. An intuitive example would be the case of gem5, when we are modifying some structures like the O3 CPU model, it may happen that we are able to complete the building process of the binary without throwing any errors but later fails during the simulation. This happens because of the same reason, GCC does not know what this code represents and it does exactly the same thing it does with other c++ codes. Apart from this, the current parallel simulation frameworks lack the ability to scale.
+Newer simulators do give us the option to do parallel simulation, but they lack one important aspect: they fail to give the simulator (or the compiler that does the parsing and AST construction) a perspective of the physical structure of the hardware design. Because of this, the preprocessing, AST construction, elaboration, and optimization follow a standard approach that a general-purpose software language compiler like GCC follows. However, unlike C and C++, HDLs carry much more information that is not visible to general-purpose compilers. An intuitive example would be the case of gem5: when we are modifying some structures like the O3 CPU model, it may happen that we are able to complete the building process of the binary without throwing any errors but later fail during the simulation. This happens because of the same reason—GCC does not know what this code represents, and it does exactly the same thing it does with other C++ code. Apart from this, the current parallel simulation frameworks lack the ability to scale.
 
-To handle the scaling issue, my mentors, Dr. Guillem and Prof. Jonathan have came up with a novel way of parallelizing RTL simulations, targeting OpenPiton, [Metro-MPI](https://ieeexplore.ieee.org/abstract/document/10137080), this novel approach breaks the entire binary simulating the whole design into smaller ones simulating a top level system and partitioned/duplicated hardware blocks and this is done by keeping the hardware boundaries in consideration, so that the data movement between these different binaries can be minimised. Then, these binaries are simulated parallely on different threads across multiple nodes by using [MPI(Message Passing Interface)](https://en.wikipedia.org/wiki/Message_Passing_Interface#Overview) which is a de facto standard for communication among processes that model a parallel program running on a distributed memory system. 
+To handle the scaling issue, my mentors, Dr. Guillem and Prof. Jonathan, have come up with a novel way of parallelizing RTL simulations, targeting OpenPiton, [Metro-MPI](https://ieeexplore.ieee.org/abstract/document/10137080). This novel approach breaks the entire binary simulating the whole design into smaller ones simulating a top-level system and partitioned/duplicated hardware blocks, keeping the hardware boundaries in consideration so that the data movement between these different binaries can be minimized. Then, these binaries are simulated in parallel on different threads across multiple nodes using [MPI (Message Passing Interface)](https://en.wikipedia.org/wiki/Message_Passing_Interface#Overview), which is a de facto standard for communication among processes that model a parallel program running on a distributed memory system.
 
-The reason we opted for this approach even though [Verilator](https://www.veripool.org/verilator/), an open source system verilog simulator, does provide a [inbuilt partitioning and scheduling](https://github.com/verilator/verilator/blob/master/docs/internals.rst#multithreaded-mode) mechanism which is based on an [1989 paper](https://www.cs.rice.edu/~vs3/PDF/Sarkar89.pdf) "Partitioning and Scheduling Parallel Programs for Multiprocessors" is because this approach is too generic and we can do better by making the partitioner and scheduler aware of the hardware structures.
+The reason we opted for this approach even though [Verilator](https://www.veripool.org/verilator/), an open-source SystemVerilog simulator, does provide an [inbuilt partitioning and scheduling](https://github.com/verilator/verilator/blob/master/docs/internals.rst#multithreaded-mode) mechanism based on a [1989 paper](https://www.cs.rice.edu/~vs3/PDF/Sarkar89.pdf) *"Partitioning and Scheduling Parallel Programs for Multiprocessors"* is because this approach is too generic, and we can do better by making the partitioner and scheduler aware of the hardware structures.
 
-In this project, Metro-MPI++, my goal was to take the same philosophy as in Metro-MPI and automatically enable it inside verilator-
-   * To automatically detect the possible partitions that can be simulated in parallel.
-   * To extract as much information as possible about the connecting interface of these partitions to enable Verilator to take informed decisions.
-   * Generate intermediate files and structures needed to insert MPI to do parallel simulations.
+In this project, Metro-MPI++, my goal was to take the same philosophy as in Metro-MPI and automatically enable it inside Verilator:
+
+* To automatically detect the possible partitions that can be simulated in parallel.
+* To extract as much information as possible about the connecting interface of these partitions to enable Verilator to make informed decisions.
+* Generate intermediate files and structures needed to insert MPI to do parallel simulations.
+
+Here’s your text with only **grammar and spelling corrections** applied, without changing your content or structure:
 
 ## Metro-MPI++ Workflow
 
@@ -43,8 +43,8 @@ In this project, Metro-MPI++, my goal was to take the same philosophy as in Metr
       Different Steps of Verilation Process
   </div>
 
-To implement this idea in Verilator, first we need to understand how exactly these RTL simulators work and which are the steps involved from start to the end. After a careful study, the most optimal place to implement this is just after the AST construction is completed as we can get all the information about the entire design from all modules from AST itself and before the elaboration step. As a result, the first aproach we tried was to analyze the XML file that Verilator outputs which contains information about the entire design. We found that it was sufficient to carry out our work since this xml file was generated from the AST.
- 
+To implement this idea in Verilator, first, we need to understand how exactly these RTL simulators work and what steps are involved from start to end. After a careful study, the most optimal place to implement this is just after the AST construction is completed, as we can get all the information about the entire design from all modules from the AST itself and before the elaboration step. As a result, the first approach we tried was to analyze the XML file that Verilator outputs, which contains information about the entire design. We found that it was sufficient to carry out our work since this XML file was generated from the AST.
+
   <div class="row mt-3">
       <div class="col-sm mt-3 mt-md-0">
           {% include figure.liquid loading="eager" path="assets/img/actual-design.png" class="img-fluid rounded z-depth-1" %}
@@ -56,14 +56,16 @@ To implement this idea in Verilator, first we need to understand how exactly the
   <div class="caption">
       Actual Design and the Modified Design Flow
   </div>
-For further explanation of the same, let's take the example of OpenPiton 2x2 configuration-
 
-  * First, we will do the analysis and find the possible top module of a partition.
-  * Second, we will find the ports that are involved in communication between partitions and with the system. Once, found will will also determine if they are active.
-  * Third, we plan to do the verilation of the detected partition seperately with a test bench having MPI functions compatible in communicating with other partitions and system.
-  * Fourth, We will generate the modified verilog files that will replace the old ones to introduce the DPI functions and the static rank identifier.
-  * Fifth, We will verilate the rank 0, the system design, seperately with the test bench same as early with minor modifications.
-  * Lastly, we will simulate the binaries in the classic MPI style execution. 
+For further explanation of the same, let's take the example of OpenPiton 2x2 configuration:
+
+* First, we will do the analysis and find the possible top module of a partition.
+* Second, we will find the ports that are involved in communication between partitions and with the system. Once found, we will also determine if they are active.
+* Third, we plan to do the verilation of the detected partition separately with a test bench having MPI functions compatible with communicating with other partitions and the system.
+* Fourth, we will generate the modified Verilog files that will replace the old ones to introduce the DPI functions and the static rank identifier.
+* Fifth, we will verilate the rank 0, the system design, separately with the test bench same as earlier with minor modifications.
+* Lastly, we will simulate the binaries in the classic MPI-style execution.
+
 
 ## Prerequisite: Migrating Metro MPI to Verilator v5.x
 
