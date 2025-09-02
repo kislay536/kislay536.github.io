@@ -152,7 +152,7 @@ The detection algorithm operates as follows:
       </div>
   </div>
   <div class="caption">
-      This is the hashed and weighted version of the raw Hierarchy Graph. The nodes with same colour represents that they have the same hash  and weight. 
+      This is the hashed and weighted version of the raw Hierarchy Graph. 
   </div>
 
 * **Partition Selection (BFS)**: With the graph built and weighted, a Breadth-First Search (BFS) is used to traverse the hierarchy level by level. At each level, the algorithm groups instances by their structural hash.
