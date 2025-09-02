@@ -130,6 +130,7 @@ The detection algorithm operates as follows:
   <div class="caption">
       The DAG representing the hierarchy of OpenPiton 2x2 configuration. 
   </div>
+  <div class="row mt-3"> <div class="col-sm mt-3 mt-md-0"> {% include figure.liquid loading="eager" path="assets/img/mmpi-partition-result.png" class="img-fluid rounded z-depth-1" %} </div> </div> <div class="caption"> Output when partition analysis was carried out on OpenPiton 2x2 configuration. </div>
 
 * **Structural Hashing**: To identify structurally identical sub-hierarchies, a unique hash is generated for each node. This hash is not based on the instance name (e.g., \$root.core\_0) but on the hierarchical path of module types (e.g., \$root.Top.Core). The system uses the [blake2b](https://en.wikipedia.org/wiki/BLAKE_%28hash_function%29#BLAKE2) algorithm for this purpose. This ensures that two instances, core\_0 and core\_1, both of type Core under a Top module, will produce the same hash, even though their instance paths are different.
 
