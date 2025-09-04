@@ -72,26 +72,15 @@ ninja.data = [{
               handler: () => {
                 window.location.href = "/blog/";
               },
-            },{id: "post-google-gemini-updates-flash-1-5-gemma-2-and-project-astra",
+            },{id: "post-metro-mpi-accelerating-verilog-system-verilog-simulations-kislay-arya",
         
-          title: 'Google Gemini updates: Flash 1.5, Gemma 2 and Project Astra <svg width="1.2rem" height="1.2rem" top=".5rem" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><path d="M17 13.5v6H5v-12h6m3-3h6v6m0-6-9 9" class="icon_svg-stroke" stroke="#999" stroke-width="1.5" fill="none" fill-rule="evenodd" stroke-linecap="round" stroke-linejoin="round"></path></svg>',
+          title: 'Metro-MPI++: Accelerating Verilog/System Verilog Simulations | Kislay Arya <svg width="1.2rem" height="1.2rem" top=".5rem" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><path d="M17 13.5v6H5v-12h6m3-3h6v6m0-6-9 9" class="icon_svg-stroke" stroke="#999" stroke-width="1.5" fill="none" fill-rule="evenodd" stroke-linecap="round" stroke-linejoin="round"></path></svg>',
         
-        description: "We’re sharing updates across our Gemini family of models and a glimpse of Project Astra, our vision for the future of AI assistants.",
+        description: "A GSoC project to automatically partition and parallelize hardware simulations in Verilator using MPI.",
         section: "Posts",
         handler: () => {
           
-            window.open("https://blog.google/technology/ai/google-gemini-update-flash-ai-assistant-io-2024/", "_blank");
-          
-        },
-      },{id: "post-displaying-external-posts-on-your-al-folio-blog",
-        
-          title: 'Displaying External Posts on Your al-folio Blog <svg width="1.2rem" height="1.2rem" top=".5rem" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><path d="M17 13.5v6H5v-12h6m3-3h6v6m0-6-9 9" class="icon_svg-stroke" stroke="#999" stroke-width="1.5" fill="none" fill-rule="evenodd" stroke-linecap="round" stroke-linejoin="round"></path></svg>',
-        
-        description: "",
-        section: "Posts",
-        handler: () => {
-          
-            window.open("https://medium.com/@al-folio/displaying-external-posts-on-your-al-folio-blog-b60a1d241a0a?source=rss-17feae71c3c4------2", "_blank");
+            window.open("https://kislay536.github.io/projects/Metro-MPI++/", "_blank");
           
         },
       },{id: "books-the-godfather",
@@ -99,16 +88,14 @@ ninja.data = [{
           description: "",
           section: "Books",handler: () => {
               window.location.href = "/books/the_godfather/";
-            },},{id: "news-a-simple-inline-announcement",
-          title: 'A simple inline announcement.',
+            },},{id: "news-selected-for-google-summer-of-code-2025-with-the-free-and-open-source-silicon-foundation-working-on-the-project-metro-mpi",
+          title: 'Selected for Google Summer of Code 2025 with the Free and Open Source...',
           description: "",
-          section: "News",},{id: "news-a-long-announcement-with-details",
-          title: 'A long announcement with details',
+          section: "News",},{id: "news-our-paper-netlam-an-automated-llm-framework-to-generate-and-evaluate-stealthy-hardware-trojans-received-the-best-workshop-paper-award-at-the-6th-acns-workshop-on-artificial-intelligence-in-hardware-security-aihws-munich-2025",
+          title: 'Our paper NETLAM: An Automated LLM Framework to Generate and Evaluate Stealthy Hardware...',
           description: "",
-          section: "News",handler: () => {
-              window.location.href = "/news/announcement_2/";
-            },},{id: "news-a-simple-inline-announcement-with-markdown-emoji-sparkles-smile",
-          title: 'A simple inline announcement with Markdown emoji! :sparkles: :smile:',
+          section: "News",},{id: "news-received-an-internship-offer-from-nvidia-bangalore-for-a-hardware-role-summer-2026",
+          title: 'Received an internship offer from NVIDIA Bangalore for a hardware role (Summer 2026)....',
           description: "",
           section: "News",},{id: "projects-metro-mpi-accelerating-verilog-system-verilog-simulations",
           title: 'Metro-MPI++: Accelerating Verilog/System Verilog Simulations',
