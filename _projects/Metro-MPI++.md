@@ -63,16 +63,16 @@ For further explanation of the same, let's take the example of OpenPiton 2x2 con
 * Fifth, we will verilate the rank 0, the system design, separately with the test bench same as earlier with minor modifications.
 * Lastly, we will simulate the binaries in the classic MPI-style execution.
 
-## Prerequisite: Migrating Metro MPI to Verilator v5.x
+## Prerequisite: Upgrading Verilator’s support in OpenPiton from v4 to v5
 
-Before implementing the main partitioning and MPI integration features, the first critical step was to make Metro-MPI (which is implemented on top of OpenPiton, the world's first open-source, general-purpose, multithreaded manycore processor with a 64-bit Ariane RISC-V core) work with the latest Verilator v5.x versions. The original framework relied on Verilator v4.x, but with newer versions like v5.038 available, upgrading was essential for long-term maintainability and compatibility.
+Before implementing the main partitioning and MPI integration features, the first critical step was to upgrade OpenPiton's(the world's first open-source, general-purpose, multithreaded manycore processor with a 64-bit Ariane RISC-V core) support for Verilator v5 from v4. The original framework relied on Verilator v4.x, but newer versions like v5.038 are already available; upgrading was essential for long-term maintainability and compatibility.
 
 This upgrade introduced several challenges due to major internal changes in Verilator between v4.x and v5.x:
 
 * Common Issues in All Versions of Verilator v5.x:
 
-  * **Precompiled Headers (pch)**: v5.x uses precompiled headers, whereas v4.x doesn’t. So, during the build, in order to prevent calling the pch files, I modified the `verilator/include/verilated.mk` (added the `-c` flag) to just compile. Later during the build, when pch is being called, it will already be compiled.
-  * **Missing Headers**: There were a few functions that were undeclared and used in my metro chipset.cpp, like `init_jbus_model_call`. The most probable reason could be that v4.x is very permissive and would let a file refer to a function declared somewhere else even if the header was missing, whereas v5.x is not. It got fixed by just declaring the functions in the file from which they were being called.
+  * **Precompiled Headers (pch)**: In Verilator v5.x, precompiled headers are used, whereas v4.x doesn’t rely on them. During the build, to avoid errors from directly invoking PCH files, I modified `verilator/include/verilated.mk` to include the `-c` flag. This ensures that the compiler only generates object files without attempting to link at this stage. By doing so, the PCH files are compiled in advance, and when they are later referenced in the build process, they are already available, preventing redundant or conflicting compilation steps.
+  * **Missing Headers**: There were a few functions that were undeclared and used in my metro chipset.cpp, like `init_jbus_model_call`. got fixed by declaring the functions in the file from which they were being called.
   * **v5.x Initialization Sequence**: v4.x was consistent with SystemVerilog, i.e., initial blocks would run before the DPI calls into the simulation, but in v5.x, the scheduler was rewritten. DPI-C calls from the host side can be scheduled before the initial blocks in the design have executed. This means `b_open()` or similar setup code in an initial block might not have run yet when `write_64b_call()` or `read_64b_call()` is first called. It may try to access a memory address even before it is initialized, resulting in a segmentation fault.
 
     ```cpp
@@ -92,7 +92,7 @@ This upgrade introduced several challenges due to major internal changes in Veri
 
 * Issues with Particular Versions:
 
-  **Negative Values**: The issue of this error is most probably the fact that v5.x is more strict and has more standards-compliant error checking. In the design, any signal must not get any negative value at all, and if it may happen, then it’s better to have padding to clip it to 0.
+  **Negative Values**: The issue of this error is most probably the fact that v5.x is more strict and has more standards-compliant error checking. In the design, any signal must not get any negative value at all, and if it may happen, then it’s better to have padding to clip it to 0. [ [Issue](https://github.com/verilator/verilator/issues/3963) ]
 
   ```verilog
   // The value in the condition may be negative
@@ -110,7 +110,7 @@ This upgrade introduced several challenges due to major internal changes in Veri
 
 ## Automatic Partitioning and Connectivity Analysis
 
-The core of the Metro-MPI++ tool is its ability to automatically analyze a Verilog design to identify parallelizable sections and map their communication pathways. When Verilator is done constructing the Abstract Syntax Tree (AST), we execute the `metro_mpi()` function, which essentially runs Metro-MPI++ using the constructed AST. The `metro_mpi()` function executes everything in stages, first entering the `V3Metro_MPI.h`.
+The goal of Metro-MPI++ is to automatically analyze a Verilog design to identify parallelizable sections and map their communication pathways. When Verilator is done constructing the Abstract Syntax Tree (AST), we execute the `metro_mpi()` function, which essentially runs Metro-MPI++  logic using the constructed AST. The `metro_mpi()` function executes in stages, first entering the `V3Metro_MPI.h`.
 
 ### Automatic Partition Detection
 
@@ -126,10 +126,10 @@ The detection algorithm operates as follows:
       </div>
   </div>
   <div class="caption">
-      The DAG representing the  hierarchy of OpenPiton 2x2 configuration. 
+      This DAG represents the  hierarchy of OpenPiton 2x2 configuration. 
   </div>
 
-* **Structural Hashing**: To identify structurally identical sub-hierarchies, a unique hash is generated for each node. This hash is not based on the instance name (e.g., \$root.core\_0) but on the hierarchical path of module types (e.g., \$root.Top.Core). The system uses the [blake2b](https://en.wikipedia.org/wiki/BLAKE_%28hash_function%29#BLAKE2) algorithm for this purpose. This ensures that two instances, core\_0 and core\_1, both of type Core under a Top module, will produce the same hash, even though their instance paths are different.
+* **Structural Hashing**: To identify structurally identical sub-hierarchies, a unique hash is generated for each node. This hash is not based on the instance name (e.g., `$root.core_0`) but on the hierarchical path of module types (e.g., `$root.Top.Core`). The system uses the [blake2b](https://en.wikipedia.org/wiki/BLAKE_%28hash_function%29#BLAKE2) algorithm for this purpose. This ensures that two instances, core\_0 and core\_1, both of type Core under a Top module, will produce the same hash, even though their instance paths are different.
 
   To compute these hashes, we first perform a DFS traversal. Once we reach a leaf node in the AST, we calculate the hash of its module name (not instance name). We repeat this for all nodes at the same level, generating a 128-bit hash for each name since `blake2b` takes variable-size input and produces a hash of fixed length. Then, as DFS moves to the parent node, we compute the hash of the parent module by hashing `<parent_module>.<child0_hash>.<child1_hash>.....<last_child_hash>`, again yielding a fixed-length hash.
 
@@ -504,4 +504,4 @@ We can see the repo that I worked on-
 
 verilator - [here](https://github.com/metro-mpi/verilator/tree/metro-mpi)
 
-Metro-MPI - [here](https://github.com/metro-mpi/metro-mpi/tree/metro-mpi%2B%2B)
+Metro-MPI - [here](https://github.com/metro-mpi/metro-mpi-private.git)
