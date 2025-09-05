@@ -156,7 +156,7 @@ The detection algorithm operates as follows:
         This is the hashed and weighted version of the raw Hierarchy Graph. 
     </div>
 
-  * **Partition Selection (BFS)**: With the graph built and weighted, a Breadth-First Search (BFS) is used to traverse the hierarchy level by level. At each level, the algorithm groups instances by their structural hash.
+  * **Partition Selection (BFS)**: With the graph built with weights, a Breadth-First Search (BFS) is used to traverse the hierarchy level by level. At each level, the algorithm groups instances by their structural hash.
 
     - If a hash appears more than once at a given level, it signifies the discovery of multiple, structurally identical instances that are candidates for partitioning.
     - To select the best candidate set, the algorithm chooses the group of instances with the highest cumulative weight. This heuristic prioritizes partitioning the most complex or significant repeating structures in the design.
@@ -174,7 +174,7 @@ Once this "best" group is identified, the algorithm designates their common modu
 
 ### Detailed Connectivity Analysis
 
-Once partition instances are identified, the `PartitionPortAnalyzer` class conducts a deep analysis of the parent module's netlist to understand the data flow. The reason why this step is important is that until we know which port of which module instance is connected to which peer, we won't be able to make the MPI structures that will be used to carry the information across multiple processes/MPI ranks.
+The creation of a functional MPI communication fabric is critically dependent on a detailed understanding of the design's data flow. Before MPI structures can be generated to pass information between processes, the system must know precisely which port on a given instance connects to which peers. Therefore, after identifying the partition instances, the `PartitionPortAnalyzer` class is invoked to perform an exhaustive analysis of the parent module's netlist. This step extracts the port-to-peer connectivity data required to construct the MPI layer that bridges the parallel processes.
 
   <div class="row mt-3">
       <div class="col-sm mt-3 mt-md-0">
@@ -185,7 +185,7 @@ Once partition instances are identified, the `PartitionPortAnalyzer` class condu
       Representation of chip module of OpenPiton 2x1 configuration. 
   </div>
 
-This analysis also serves as an optimization that helps reduce the data movement between MPI ranks during runtime. For example, it is evident from the above image that the 2 tiles are connected via wires defined in the chip module. Inherently, the data should flow from tile0 → chip → tile1, as wires are part of the chip module, and vice versa. However, we don't need the messages to pass through the chip module if the two instances are directly communicating with each other.
+In this analysis, we also perform an optimization to reduce data movement between MPI ranks during runtime. For example, it is clear from the above image that both tiles are connected via wires defined in the chip module. Inherently, the data should flow from tile0 → chip → tile1, as wires are part of the chip module, and vice versa. However, we don't need the messages to pass through the chip module if the two instances are directly communicating with each other.
 
 To avoid this, the analysis recursively looks into the connections of each port of each module instance and classifies:
 
@@ -197,7 +197,7 @@ More details of this analysis are mentioned below:
 
 * It traces signals through chained `assign` statements using the `resolveWireChain` function to find the ultimate source wire for any given port connection.
 * It applies a sophisticated filtering logic that intelligently prioritizes true `Output` ports as data originators over passive, passthrough `assign` statements, resulting in a cleaner data-flow graph.
-* The analyzer is capable of determining the direction of ports on any instantiated module within the parent scope, whether it is a designated partition or not, by maintaining a map of instance names to their AST definitions (`m_instanceToModulePtr`).
+* The analyzer is capable of determining the direction of ports on any module instance within the parent scope, whether it is a designated partition or not, by maintaining a map of instance names to their AST definitions (`m_instanceToModulePtr`).
 
 ---
 
@@ -217,7 +217,7 @@ The assignment process is as follows:
 
 * **Sequential Assignment**: After sorting, the framework iterates through the list of partition instances and assigns them sequential, incremental ranks starting from 1 (e.g., 1, 2, 3, ...).
 
-* **Centralized Mapping**: These assignments are stored in a map (`m_mpiRankMap`), which serves as the single source of truth for retrieving the rank of any partition instance or the system process during the analysis. The final rank for each port and its communication partners is stored directly within the Port and CommunicationPartner data structures.
+* **Centralized Mapping**: These assignments are stored in a map (`m_mpiRankMap`), which serves as the directory for retrieving the rank for any partition instance or the system process during the analysis. The final rank for each port and its communication partners is stored directly within the Port and CommunicationPartner data structures.
 
 The reason we introduce MPI ranks here, even though ranks are a runtime assignment/property, is because by doing this we can correlate any identifier of the partitions with the rank as we control the rank assignment. More importantly, it makes the generation of MPI structures and MPI send & receive functions very straightforward.
 
