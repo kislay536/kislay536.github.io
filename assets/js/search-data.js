@@ -107,7 +107,7 @@ ninja.data = [{
         title: 'LinkedIn',
         section: 'Socials',
         handler: () => {
-          window.open("https://www.linkedin.com/in/https://www.linkedin.com/in/kislay-arya-154492254/", "_blank");
+          window.open("https://www.linkedin.com/in/kislay-arya-154492254", "_blank");
         },
       },{
         id: 'social-orcid',
