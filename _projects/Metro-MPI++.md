@@ -131,9 +131,10 @@ The detection algorithm operates as follows:
 
   * **Structural Hashing**: To identify structurally identical sub-hierarchies, a unique hash is generated for each node. This hash is not based on the instance name (e.g., `$root.core_0`) but on the hierarchical path of module types (e.g., `$root.Top.Core`). The system uses the [blake2b](https://en.wikipedia.org/wiki/BLAKE_%28hash_function%29#BLAKE2) algorithm for this purpose. This ensures that two instances, core\_0 and core\_1, both of type Core under a Top module, will produce the same hash, even though their instance paths are different.
 
-    To compute these hashes, we first perform a DFS traversal. Once we reach a leaf node in the AST, we calculate the hash of its module name (not instance name). We repeat this for all nodes at the same level, generating a 128-bit hash for each name since `blake2b` takes variable-size input and produces a hash of fixed length. Then, as DFS moves to the parent node, we compute the hash of the parent module by hashing `<parent_module>.<child0_hash>.<child1_hash>.....<last_child_hash>`, again yielding a fixed-length hash.
+    To compute these hashes, we first perform a DFS traversal. Once we reach a leaf node in the AST, we calculate the hash of its module name (not instance name). We repeat this for all nodes at the same level, generating a 128-bit hash for each name since `blake2b` takes variable-size input and produces a hash of fixed length. Then, as DFS moves to the parent node, we compute the hash of the parent module by operating the hash function on `<parent_module>.<child0_hash>.<child1_hash>.....<last_child_hash>`, again yielding a fixed-length hash.
 
-    By using `blake2b`, we ensure consistent hashes for all nodes, guaranteeing that if two nodes have the same hash, we can say with 100% certainty that the hierarchies beneath them are exactly the same—or they represent duplicate hardware blocks.
+    So, by choosing `blake2b` we get a consistent hash for all nodes. In this way, we are ensuring that if any two nodes have the same hash, then with certainty we can assume that the hierarchy below those nodes are exactly the same or, they represent a duplicate hardware block.
+
 
     <div class="row mt-3">
         <div class="col-sm mt-3 mt-md-0">
@@ -141,10 +142,10 @@ The detection algorithm operates as follows:
         </div>
     </div>
     <div class="caption">
-        This is the hashed version of the raw Hierarchy Graph. The nodes with same colour represents that they have the same hash and visually it is evident that the underlying hierarchy is also the same for those nodes. 
+        This is the hashed version of the Raw Hierarchy Graph. The nodes with the same colour represents the same hash and visually it is clear that the underlying hierarchy is also the same for those nodes. 
     </div>
 
-  * **Complexity Weighting or the Weight Model**: After assigning the hashes, it became easy to find duplicate hierarchies, but this didn’t tell us anything about the size of those hierarchies. So we used a weight model that assigns weights to nodes, allowing us to estimate the size of the underlying hierarchy. The current weight model is simple and works for any hardware design with a manycore CPU-like structure, but it may not work for other designs. In those cases, the weight model needs to be modified.
+  * **Complexity Weighting or the Weight Model**: After assigning the hashes, it became easy to find duplicate hierarchies, but this didn’t provide us any information about their size. Next, we used a weight model that assigns weights to nodes, allowing us to estimate the size of the underlying hierarchy. The current weight model is simple and works for any hardware design that has repeated hardware blocks organized as in the case of a manycore CPU. We have not tested the myriad of possible different topologies that exist in other designs, which may require changing the weight model or updating it to make it more general. This remains a future work. 
 
     <div class="row mt-3">
         <div class="col-sm mt-3 mt-md-0">
