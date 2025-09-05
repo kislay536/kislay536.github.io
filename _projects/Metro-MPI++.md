@@ -120,40 +120,40 @@ The detection algorithm operates as follows:
 
   * **Hierarchical Graph Construction**: The [visitor](https://en.wikipedia.org/wiki/Visitor_pattern) traverses the entire design Abstract Syntax Tree (AST), starting from the top-level module. It constructs a directed graph representing the module instantiation hierarchy. Each node in this graph corresponds to a module instance, and edges represent the parent-child relationship between instances. Key metadata is stored for each node, including its instance name, module name, and full hierarchical path. This graph acts as the foundation of further analysis, and everything else depends on it.
 
-  <div class="row mt-3">
-      <div class="col-sm mt-3 mt-md-0">
-          {% include figure.liquid loading="eager" path="assets/img/mmpi-raw-hierarchy.png" class="img-fluid rounded z-depth-1" %}
-      </div>
-  </div>
-  <div class="caption">
-      This DAG represents the hierarchy of OpenPiton 2x2 configuration. 
-  </div>
+    <div class="row mt-3">
+        <div class="col-sm mt-3 mt-md-0">
+            {% include figure.liquid loading="eager" path="assets/img/mmpi-raw-hierarchy.png" class="img-fluid rounded z-depth-1" %}
+        </div>
+    </div>
+    <div class="caption">
+        This DAG represents the hierarchy of OpenPiton 2x2 configuration. 
+    </div>
 
   * **Structural Hashing**: To identify structurally identical sub-hierarchies, a unique hash is generated for each node. This hash is not based on the instance name (e.g., `$root.core_0`) but on the hierarchical path of module types (e.g., `$root.Top.Core`). The system uses the [blake2b](https://en.wikipedia.org/wiki/BLAKE_%28hash_function%29#BLAKE2) algorithm for this purpose. This ensures that two instances, core\_0 and core\_1, both of type Core under a Top module, will produce the same hash, even though their instance paths are different.
 
-  To compute these hashes, we first perform a DFS traversal. Once we reach a leaf node in the AST, we calculate the hash of its module name (not instance name). We repeat this for all nodes at the same level, generating a 128-bit hash for each name since `blake2b` takes variable-size input and produces a hash of fixed length. Then, as DFS moves to the parent node, we compute the hash of the parent module by hashing `<parent_module>.<child0_hash>.<child1_hash>.....<last_child_hash>`, again yielding a fixed-length hash.
+    To compute these hashes, we first perform a DFS traversal. Once we reach a leaf node in the AST, we calculate the hash of its module name (not instance name). We repeat this for all nodes at the same level, generating a 128-bit hash for each name since `blake2b` takes variable-size input and produces a hash of fixed length. Then, as DFS moves to the parent node, we compute the hash of the parent module by hashing `<parent_module>.<child0_hash>.<child1_hash>.....<last_child_hash>`, again yielding a fixed-length hash.
 
-  By using `blake2b`, we ensure consistent hashes for all nodes, guaranteeing that if two nodes have the same hash, we can say with 100% certainty that the hierarchies beneath them are exactly the same—or they represent duplicate hardware blocks.
+    By using `blake2b`, we ensure consistent hashes for all nodes, guaranteeing that if two nodes have the same hash, we can say with 100% certainty that the hierarchies beneath them are exactly the same—or they represent duplicate hardware blocks.
 
-  <div class="row mt-3">
-      <div class="col-sm mt-3 mt-md-0">
-          {% include figure.liquid loading="eager" path="assets/img/mmpi-hashed-hierarchy.png" class="img-fluid rounded z-depth-1" %}
-      </div>
-  </div>
-  <div class="caption">
-      This is the hashed version of the raw Hierarchy Graph. The nodes with same colour represents that they have the same hash and visually it is evident that the underlying hierarchy is also the same for those nodes. 
-  </div>
+    <div class="row mt-3">
+        <div class="col-sm mt-3 mt-md-0">
+            {% include figure.liquid loading="eager" path="assets/img/mmpi-hashed-hierarchy.png" class="img-fluid rounded z-depth-1" %}
+        </div>
+    </div>
+    <div class="caption">
+        This is the hashed version of the raw Hierarchy Graph. The nodes with same colour represents that they have the same hash and visually it is evident that the underlying hierarchy is also the same for those nodes. 
+    </div>
 
   * **Complexity Weighting or the Weight Model**: After assigning the hashes, it became easy to find duplicate hierarchies, but this didn’t tell us anything about the size of those hierarchies. So we used a weight model that assigns weights to nodes, allowing us to estimate the size of the underlying hierarchy. The current weight model is simple and works for any hardware design with a manycore CPU-like structure, but it may not work for other designs. In those cases, the weight model needs to be modified.
 
-  <div class="row mt-3">
-      <div class="col-sm mt-3 mt-md-0">
-          {% include figure.liquid loading="eager" path="assets/img/mmpi-weighted-hierarchy.png" class="img-fluid rounded z-depth-1" %}
-      </div>
-  </div>
-  <div class="caption">
-      This is the hashed and weighted version of the raw Hierarchy Graph. 
-  </div>
+    <div class="row mt-3">
+        <div class="col-sm mt-3 mt-md-0">
+            {% include figure.liquid loading="eager" path="assets/img/mmpi-weighted-hierarchy.png" class="img-fluid rounded z-depth-1" %}
+        </div>
+    </div>
+    <div class="caption">
+        This is the hashed and weighted version of the raw Hierarchy Graph. 
+    </div>
 
   * **Partition Selection (BFS)**: With the graph built and weighted, a Breadth-First Search (BFS) is used to traverse the hierarchy level by level. At each level, the algorithm groups instances by their structural hash.
 
