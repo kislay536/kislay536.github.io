@@ -69,11 +69,11 @@ ninja.data = [{
             window.open("https://kislay536.github.io/projects/Metro-MPI++/", "_blank");
           
         },
-      },{id: "books-the-godfather",
-          title: 'The Godfather',
+      },{id: "books-white-nights",
+          title: 'White Nights',
           description: "",
           section: "Books",handler: () => {
-              window.location.href = "/books/the_godfather/";
+              window.location.href = "/books/white_nights/";
             },},{id: "news-selected-for-google-summer-of-code-2025-with-the-free-and-open-source-silicon-foundation-working-on-the-project-metro-mpi",
           title: 'Selected for Google Summer of Code 2025 with the Free and Open Source...',
           description: "",
