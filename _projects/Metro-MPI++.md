@@ -147,14 +147,14 @@ The detection algorithm operates as follows:
 
   * **Complexity Weighting or the Weight Model**: After assigning the hashes, it became easy to find duplicate hierarchies, but this didn’t provide us any information about their size. Next, we used a weight model that assigns weights to nodes, allowing us to estimate the size of the underlying hierarchy. The current weight model is simple and works for any hardware design that has repeated hardware blocks organized as in the case of a manycore CPU. We have not tested the myriad of possible different topologies that exist in other designs, which may require changing the weight model or updating it to make it more general. This remains a future work. 
 
-    <div class="row mt-3">
-        <div class="col-sm mt-3 mt-md-0">
-            {% include figure.liquid loading="eager" path="assets/img/mmpi-weighted-hierarchy.png" class="img-fluid rounded z-depth-1" %}
-        </div>
-    </div>
-    <div class="caption">
-        This is the hashed and weighted version of the raw Hierarchy Graph. 
-    </div>
+  <div class="row mt-3">
+      <div class="col-sm mt-3 mt-md-0">
+          {% include figure.liquid loading="eager" path="assets/img/mmpi-weighted-hierarchy.png" class="img-fluid rounded z-depth-1" %}
+      </div>
+  </div>
+  <div class="caption">
+      This is the hashed and weighted version of the raw Hierarchy Graph. 
+  </div>
 
   * **Partition Selection (BFS)**: With the graph built with weights, a Breadth-First Search (BFS) is used to traverse the hierarchy level by level. At each level, the algorithm groups instances by their structural hash.
 
