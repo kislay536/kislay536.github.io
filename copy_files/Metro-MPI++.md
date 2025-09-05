@@ -16,20 +16,19 @@ related_publications: false
 
 # Project Description
 
-As modern SoC designs get more and more complex, especially manycore-based ones, simulation performance becomes a serious bottleneck. RTL simulation is still the most accurate way to verify digital designs, but the traditional monolithic simulators don’t scale well when the design has many replicated hardware blocks like cores or NoC components. This often results in extremely long simulation times, which slows down the development design cycle.
+As modern SoC designs especially manycore-based ones get more and more complex, simulation performance becomes a serious bottleneck. RTL simulation is still the most accurate way to verify digital
+designs, but the traditional monolithic simulators don’t scale well when the design has a lot of replicated
+blocks like cores or NoC components. This often results in extremely long simulation times, which slows
+down development.
 
-Newer simulators do give us the option to do parallel simulation, but they lack one important aspect: they fail to give the simulator (or the compiler that does the parsing and AST construction) a perspective of the physical structure of the hardware design. Because of this, the preprocessing, AST construction, elaboration, and optimization follow a standard approach that a general-purpose software language compiler like GCC follows. However, unlike C and C++, HDLs carry much more information that is not visible to general-purpose compilers. An intuitive example would be the case of gem5: when we are modifying some structures like the O3 CPU model, it may happen that we are able to complete the building process of the binary without throwing any errors but later fail during the simulation. This happens because of the same reason—GCC does not know what this code represents, and it does exactly the same thing it does with other C++ code. Apart from this, the current parallel simulation frameworks lack the ability to scale.
+Newer simulators do give us the option to do parallel simulation but they lack at one important aspect and that is they fail to give the Simulator(or the compiler that doees the parsing and AST construction) a perspective of the physical structure of the hardware design. Becasue of this, the preprocessing, AST Construction, elaboration and optimization follows a standard approach that a general purpose software language compiler like GCC follows. But unlike C and C++, HDLs carry much more information that are kind-of not visible to the GP compilers. An intuitive example would be the case of gem5, when we are modifying some structurs in gem5 let's say the O3 CPU model than it may happen that we are able to complete the building process of the binary of any architecture i.e. it doesn't throw any errors but despite this it may happen that it fails terribily during the run simulations. ANd this happens because of the same reason, that g++ doesn't know what this code represents and it does exactly the same thing it does with other c++ codes. Apart from this, the current parallel simulation frameworks lacks the ability to scale.
 
-To handle the scaling issue, my mentors, Dr. Guillem and Prof. Jonathan, have come up with a novel way of parallelizing RTL simulations, targeting OpenPiton, [Metro-MPI](https://ieeexplore.ieee.org/abstract/document/10137080). This novel approach breaks the entire binary simulating the whole design into smaller ones simulating a top-level system and partitioned/duplicated hardware blocks, keeping the hardware boundaries in consideration so that the data movement between these different binaries can be minimized. Then, these binaries are simulated in parallel on different threads across multiple nodes using [MPI (Message Passing Interface)](https://en.wikipedia.org/wiki/Message_Passing_Interface#Overview), which is a de facto standard for communication among processes that model a parallel program running on a distributed memory system.
+To handle scaling issue, my mentors, Dr. Guillem and Prof. Jonathan have came up with a nice way of parallelizing RTL simulation of OpenPiton, [Metro-MPI](https://ieeexplore.ieee.org/abstract/document/10137080), by manually generating different binaries that can be simulated parallely on different threads across multiple nodes by exploiting the hardware boundaries like the NoC structures and by using Message Passing Interface.
 
-The reason we opted for this approach even though [Verilator](https://www.veripool.org/verilator/), an open-source SystemVerilog simulator, does provide an [inbuilt partitioning and scheduling](https://github.com/verilator/verilator/blob/master/docs/internals.rst#multithreaded-mode) mechanism based on a [1989 paper](https://www.cs.rice.edu/~vs3/PDF/Sarkar89.pdf) *"Partitioning and Scheduling Parallel Programs for Multiprocessors"* is because this approach is too generic, and we can do better by making the partitioner and scheduler aware of the hardware structures.
-
-In this project, Metro-MPI++, my goal was to take the same philosophy as in Metro-MPI and automatically enable it inside Verilator:
-
-* To automatically detect the possible partitions that can be simulated in parallel.
-* To extract as much information as possible about the connecting interface of these partitions to enable Verilator to make informed decisions.
-* Generate intermediate files and structures needed to insert MPI to do parallel simulations.
-
+In this project, Metro-MPI++, my goal was to take the same philosophy as in Metro-MPI and enable verilator, an open source system verilog simulator,-
+   * To automatically detect the possible partitions that can be simulated parallely.
+   * To extract as much information as possible about the connecting interface of these partitions to enable Verilator to take informed descisions.
+   * Generate intermediate files and structures needed to insert MPI to do parallel simulations.
 
 ## Metro-MPI++ Workflow
 
@@ -42,7 +41,7 @@ In this project, Metro-MPI++, my goal was to take the same philosophy as in Metr
       Different Steps of Verilation Process
   </div>
 
-To implement this idea in Verilator, first, we need to understand how exactly these RTL simulators work and what steps are involved from start to end. After a careful study, the most optimal place to implement this is just after the AST construction is completed, as we can get all the information about the entire design from all modules from the AST itself and before the elaboration step. As a result, the first approach we tried was to analyze the XML file that Verilator outputs, which contains information about the entire design. We found that it was sufficient to carry out our work since this XML file was generated from the AST.
+To implement this idea in verilator, we need to first understand how exactly these RTL simulators particularly verilator works and what are the steps involved from start to the end. The most optimal place to implement this is just after the AST construction is completed as we can get all the information about the entire design from all modules from AST itself and before the elaboration step. We first tried to analyze the XML file that verilator outputs which contains information about the entire design in xml and found that it was sufficient to carry out our work and this xml file generation was solely done from the AST that's why we chose to do it after AST construction. 
   <div class="row mt-3">
       <div class="col-sm mt-3 mt-md-0">
           {% include figure.liquid loading="eager" path="assets/img/actual-design.png" class="img-fluid rounded z-depth-1" %}
@@ -54,71 +53,68 @@ To implement this idea in Verilator, first, we need to understand how exactly th
   <div class="caption">
       Actual Design and the Modified Design Flow
   </div>
-For further explanation of the same, let's take the example of OpenPiton 2x2 configuration:
+For further explanation of the same, let's take the example of OpenPiton 2x2 configuration-
 
-* First, we will do the analysis and find the possible top module of a partition.
-* Second, we will find the ports that are involved in communication between partitions and with the system. Once found, we will also determine if they are active.
-* Third, we plan to do the verilation of the detected partition separately with a test bench having MPI functions compatible with communicating with other partitions and the system.
-* Fourth, we will generate the modified Verilog files that will replace the old ones to introduce the DPI functions and the static rank identifier.
-* Fifth, we will verilate the rank 0, the system design, separately with the test bench same as earlier with minor modifications.
-* Lastly, we will simulate the binaries in the classic MPI-style execution.
+  * First, we will do the analysis and find the possible top module of a partition.
+  * Second, we will find the ports that are involved in communication between partitions and with the system. Once, found will will also determine if they are active.
+  * Third, we plan to do the verilation of the detected partition seperately with a test bench having MPI functions compatible in communicating with other partitions and system.
+  * Fourth, We will generate the modified verilog files that will replace the old ones to introduce the DPI functions and the static rank identifier.
+  * Fifth, We will verilate the rank 0, the system design, seperately with the test bench same as early with minor modifications.
+  * Lastly, we will simulate the binaries in the classic MPI style execution. 
 
-## Prerequisite: Upgrading Verilator’s support in OpenPiton from v4 to v5
+## Prerequisite: Migrating Metro MPI to Verilator v5.x
 
-Before implementing the main partitioning and MPI integration features, the first critical step was to upgrade OpenPiton's(the world's first open-source, general-purpose, multithreaded manycore processor with a 64-bit Ariane RISC-V core) support for Verilator v5 from v4. The original framework relied on Verilator v4.x, but newer versions like v5.038 are already available; upgrading was essential for long-term maintainability and compatibility.
+Before implementing the main partitioning and MPI integration features, the first critical step was to make Metro-MPI(which is implemented on top of OpenPiton, world's first open source, general purpose, multithreaded manycore processor with 64-bit Ariane RISC-V core) work with the latest Verilator v5.x versions. The original framework relied on Verilator v4.x, but with newer versions like v5.038 available, upgrading was essential for long-term maintainability and compatibility.
 
 This upgrade introduced several challenges due to major internal changes in Verilator between v4.x and v5.x:
 
-* Common Issues in All Versions of Verilator v5.x:
+  * Common Issues in All Versions of Verilator v5.x :
+    
+    * **Precompiled Headers (pch)**: v5.x uses precompiled headers, whereas v4.x doesn’t. So, during the build, in order to prevent calling the pch files, I modified the `verilator/include/verilated.mk` (added the `-c` flag) to just compile. Later during the build, when pch is being called, it will already be compiled.
+    * **Missing Headers**: There were a few functions that were undeclared and were used in my metro chipset.cpp, like init jbus model call. The most probable reason could be that v4.x is very permissive and would let a file refer to a function declared somewhere else even if the header was missing, whereas v5.x is not. It got fixed by just declaring the functions in the file from which they were being called.
+    * **v5.x Initialization Sequence**: v4.x was consistent with SystemVerilog, i.e., initial blocks would run before the DPI calls into the simulation, but in v5.x, the scheduler was rewritten. DPI-C calls from the host side can be scheduled before the initial blocks in the design have executed. This means `b_open()` or similar setup code in an initial block might not have run yet when `write_64b_call()` or `read_64b_call()` is first called. It may try to access a memory address even before it is initialized, resulting in a segmentation fault.
 
-  * **Precompiled Headers (pch)**: In Verilator v5.x, precompiled headers are used, whereas v4.x doesn’t rely on them. During the build, to avoid errors from directly invoking PCH files, I modified `verilator/include/verilated.mk` to include the `-c` flag. This ensures that the compiler only generates object files without attempting to link at this stage. By doing so, the PCH files are compiled in advance, and when they are later referenced in the build process, they are already available, preventing redundant or conflicting compilation steps.
-  * **Missing Headers**: There were a few functions that were undeclared and used in my metro chipset.cpp, like `init_jbus_model_call`. got fixed by declaring the functions in the file from which they were being called.
-  * **v5.x Initialization Sequence**: v4.x was consistent with SystemVerilog, i.e., initial blocks would run before the DPI calls into the simulation, but in v5.x, the scheduler was rewritten. DPI-C calls from the host side can be scheduled before the initial blocks in the design have executed. This means `b_open()` or similar setup code in an initial block might not have run yet when `write_64b_call()` or `read_64b_call()` is first called. It may try to access a memory address even before it is initialized, resulting in a segmentation fault.
+      ```cpp
+      /* ----------------------------------------------------------------
+      * Guard against the new Verilator 5.x scheduler: the first call may
+      * arrive before any initial block that used to call b_open().
+      * ---------------------------------------------------------------- */
+      if (sysMem == NULL) {
+      // sysMem = b_create(); // returns a valid (but empty) root
+      printf("[IOB] Lazy init_jbus_model_call at t=%llu\n",
+      Verilated::time());
+      init_jbus_model_call((char*)"mem.image", 0);
+      }
+      ```
+      By doing this inside the `write_64b_call()` or `read_64b_call()` functions, we are initializing the root/memory if it is not initialized, with a 0 value.
 
-    ```cpp
-    /* ----------------------------------------------------------------
-    * Guard against the new Verilator 5.x scheduler: the first call may
-    * arrive before any initial block that used to call b_open().
-    * ---------------------------------------------------------------- */
-    if (sysMem == NULL) {
-    // sysMem = b_create(); // returns a valid (but empty) root
-    printf("[IOB] Lazy init_jbus_model_call at t=%llu\n",
-    Verilated::time());
-    init_jbus_model_call((char*)"mem.image", 0);
-    }
+  * Issues with Particular Versions:
+    
+    **Negative Values**: The issue of this error is most probably the fact that v5.x is more strict and has more standards-compliant error checking. In the design, any signal must not get any negative value at all, and if it may happen, then it’s better to have padding to clip it to 0.
+    ```verilog
+    // The value in the condition may be negative
+    return_data_S2 = {{(‘L2_P1_DATA_BUF_IN_WIDTH - ‘L2_STATE_DATA_WIDTH){1’b0}},
+                     state_data_trans_S2[‘L2_STATE_DATA]};
     ```
-
-    By doing this inside the `write_64b_call()` or `read_64b_call()` functions, we are initializing the root/memory if it is not initialized, with a 0 value.
-
-* Issues with Particular Versions:
-
-  **Negative Values**: The issue of this error is most probably the fact that v5.x is more strict and has more standards-compliant error checking. In the design, any signal must not get any negative value at all, and if it may happen, then it’s better to have padding to clip it to 0. [ [Issue](https://github.com/verilator/verilator/issues/3963) ]
-
-  ```verilog
-  // The value in the condition may be negative
-  return_data_S2 = {{(‘L2_P1_DATA_BUF_IN_WIDTH - ‘L2_STATE_DATA_WIDTH){1’b0}},
-                   state_data_trans_S2[‘L2_STATE_DATA]};
-  ```
-
-  ```verilog
-  // Better way to implement the same logic
-  localparam PAD_BITS = ‘L2_STATE_DATA_WIDTH >= ‘L2_P1_DATA_BUF_IN_WIDTH
-                        ? 0
-                        : ‘L2_P1_DATA_BUF_IN_WIDTH - ‘L2_STATE_DATA_WIDTH;
-  return_data_S2 = {{(PAD_BITS){1’b0}}, state_data_trans_S2[‘L2_STATE_DATA]};
-  ```
+    ```verilog
+    // Better way to implement the same logic
+    localparam PAD_BITS = ‘L2_STATE_DATA_WIDTH >= ‘L2_P1_DATA_BUF_IN_WIDTH
+                          ? 0
+                          : ‘L2_P1_DATA_BUF_IN_WIDTH - ‘L2_STATE_DATA_WIDTH;
+    return_data_S2 = {{(PAD_BITS){1’b0}}, state_data_trans_S2[‘L2_STATE_DATA]};
+    ```
 
 ## Automatic Partitioning and Connectivity Analysis
 
-The goal of Metro-MPI++ is to automatically analyze a Verilog design to identify parallelizable sections and map their communication pathways. When Verilator is done constructing the Abstract Syntax Tree (AST), we execute the `metro_mpi()` function, which essentially runs Metro-MPI++  logic using the constructed AST. The `metro_mpi()` function executes in stages, first entering the `V3Metro_MPI.h`.
+The core of the Metro-MPI++ tool is its ability to automatically analyze a Verilog design to identify parallelizable sections and map their communication pathways. When Verilator is done constructing the Abstract Syntax Tree(AST), we are executing the `metro_mpi()` which is basically a function which is executing Metro-MPI++ using the constructed AST. The `metro_mpi()` function executes everything in stages, first entering the `V3Metro_MPI.h`  
 
 ### Automatic Partition Detection
 
-The first and most critical step is to identify which parts of the hardware design are suitable for partitioning and parallel simulation. The framework employs a heuristic-based approach that identifies structurally identical, repeated module instances within the design hierarchy. This process is managed by the `HierCellsGraphVisitor` class.
+The first and most critical step is to identify which parts of the hardware design are suitable for being partitioned and simulated in parallel. The framework employs a heuristic-based approach that identifies structurally identical, repeated module instances within the design hierarchy. This process is managed by the `HierCellsGraphVisitor` class.
 
 The detection algorithm operates as follows:
 
-* **Hierarchical Graph Construction**: The [visitor](https://en.wikipedia.org/wiki/Visitor_pattern) traverses the entire design Abstract Syntax Tree (AST), starting from the top-level module. It constructs a directed graph representing the module instantiation hierarchy. Each node in this graph corresponds to a module instance, and edges represent the parent-child relationship between instances. Key metadata is stored for each node, including its instance name, module name, and full hierarchical path. This graph acts as the foundation of further analysis, and everything else depends on it.
+  * **Hierarchical Graph Construction**: The [visitor](https://en.wikipedia.org/wiki/Visitor_pattern) traverses the entire design Abstract Syntax Tree (AST), starting from the top-level module. It constructs a directed graph representing the module instantiation hierarchy. Each node in this graph corresponds to a module instance, and edges represent the parent-child relationship between instances. Key metadata is stored for each node, including its instance name, module name, and full hierarchical path. This graph acts as the foundation of further analysis and everything further depends on it.
 
   <div class="row mt-3">
       <div class="col-sm mt-3 mt-md-0">
@@ -126,14 +122,10 @@ The detection algorithm operates as follows:
       </div>
   </div>
   <div class="caption">
-      This DAG represents the  hierarchy of OpenPiton 2x2 configuration. 
+      The DAG representing the  hierarchy of OpenPiton 2x2 configuration. 
   </div>
 
-* **Structural Hashing**: To identify structurally identical sub-hierarchies, a unique hash is generated for each node. This hash is not based on the instance name (e.g., `$root.core_0`) but on the hierarchical path of module types (e.g., `$root.Top.Core`). The system uses the [blake2b](https://en.wikipedia.org/wiki/BLAKE_%28hash_function%29#BLAKE2) algorithm for this purpose. This ensures that two instances, core\_0 and core\_1, both of type Core under a Top module, will produce the same hash, even though their instance paths are different.
-
-  To compute these hashes, we first perform a DFS traversal. Once we reach a leaf node in the AST, we calculate the hash of its module name (not instance name). We repeat this for all nodes at the same level, generating a 128-bit hash for each name since `blake2b` takes variable-size input and produces a hash of fixed length. Then, as DFS moves to the parent node, we compute the hash of the parent module by hashing `<parent_module>.<child0_hash>.<child1_hash>.....<last_child_hash>`, again yielding a fixed-length hash.
-
-  By using `blake2b`, we ensure consistent hashes for all nodes, guaranteeing that if two nodes have the same hash, we can say with 100% certainty that the hierarchies beneath them are exactly the same—or they represent duplicate hardware blocks.
+  * **Structural Hashing**: To identify structurally identical sub-hierarchies, a unique hash is generated for each node. This hash is not based on the instance name (e.g., \$root.core_0), but on the hierarchical path of module types (e.g., \$root.Top.Core). The system uses the [blake2b](https://en.wikipedia.org/wiki/BLAKE_(hash_function)#BLAKE2) algorithm for this purpose. This ensures that two instances, core_0 and core_1, both of type Core under a Top module, will produce the same hash, even though their instance paths are different. To add these hashes, we first do a DFS traversal and once we reached the lead node, basically a leaf module in AST, we calculated the hash of its module name(not instance name) and we do the same for all nodes in the same level, we got a 128 bit long hash for each name as `blake2b` takes variable size of input and produces hash of same length. Then as in DFS we go to the parent node, we computed the hash of parent module by operating the hash function on `<parent_module>.<child0_hash>.<child1_hash>.....<last_child_hash>` and this again gives hash of same length. So, by choosing `blake2b` we get a consistent hash for all nodes and by this way we are ensuring that if any two node has the same hash, then with 100% certainity we can say that the hierarchy below those nodes are exactly the same. Or, they represent a duplicate hardware block.
 
   <div class="row mt-3">
       <div class="col-sm mt-3 mt-md-0">
@@ -144,7 +136,7 @@ The detection algorithm operates as follows:
       This is the hashed version of the raw Hierarchy Graph. The nodes with same colour represents that they have the same hash and visually it is evident that the underlying hierarchy is also the same for those nodes. 
   </div>
 
-* **Complexity Weighting or the Weight Model**: After assigning the hashes, it became easy to find duplicate hierarchies, but this didn’t tell us anything about the size of those hierarchies. So we used a weight model that assigns weights to nodes, allowing us to estimate the size of the underlying hierarchy. The current weight model is simple and works for any hardware design with a manycore CPU-like structure, but it may not work for other designs. In those cases, the weight model needs to be modified.
+  * **Complexity Weighting or the Weight Model**: After assigining the hashes, it became easy to find the duplicate hierarchies but it didn't tell anything about the size of those hierarchies so we used a weight model which will basically assign weights to the nodes from which we can estimate the size of underlying hierarchy. The current weight model is simple and will work for any Hardware design which has a design similar to a manycore CPU but may not work for other types of design. And in those, case one just need to modify the weight model.  
 
   <div class="row mt-3">
       <div class="col-sm mt-3 mt-md-0">
@@ -152,13 +144,14 @@ The detection algorithm operates as follows:
       </div>
   </div>
   <div class="caption">
-      This is the hashed and weighted version of the raw Hierarchy Graph. 
+      This is the hashed and weighted version of the raw Hierarchy Graph. The nodes with same colour represents that they have the same hash  and weight. 
   </div>
 
-* **Partition Selection (BFS)**: With the graph built and weighted, a Breadth-First Search (BFS) is used to traverse the hierarchy level by level. At each level, the algorithm groups instances by their structural hash.
+  * **Partition Selection (BFS)**: With the graph built and weighted, a Breadth-First Search (BFS) is used to traverse the hierarchy level by level. At each level, the algorithm groups instances by their structural hash.
 
-  * If a hash appears more than once at a given level, it signifies the discovery of multiple, structurally identical instances that are candidates for partitioning.
-  * To select the best candidate set, the algorithm chooses the group of instances with the highest cumulative weight. This heuristic prioritizes partitioning the most complex or significant repeating structures in the design.
+      - If a hash appears more than once at a given level, it signifies the discovery of multiple, structurally identical instances that are candidates for partitioning.
+
+      - To select the best candidate set, the algorithm chooses the group of instances with the highest cumulative weight. This heuristic prioritizes partitioning the most complex or significant repeating structures in the design.
 
 Once this "best" group is identified, the algorithm designates their common module type as the partition module and outputs the list of instance names to be analyzed further.
 
@@ -173,8 +166,7 @@ Once this "best" group is identified, the algorithm designates their common modu
 
 ### Detailed Connectivity Analysis
 
-Once partition instances are identified, the `PartitionPortAnalyzer` class conducts a deep analysis of the parent module's netlist to understand the data flow. The reason why this step is important is that until we know which port of which module instance is connected to which peer, we won't be able to make the MPI structures that will be used to carry the information across multiple processes/MPI ranks.
-
+Once partition instances are identified, the `PartitionPortAnalyzer` class conducts a deep analysis of the parent module's netlist to understand the data flow. The reason why this step in important is because until we don't know which port of which module instance is connected to which peer, we woun't be able to make the MPI structures that will be used to carry the information across multiple processes/MPI ranks. 
   <div class="row mt-3">
       <div class="col-sm mt-3 mt-md-0">
           {% include figure.liquid loading="eager" path="assets/img/mmpi-connections.png" class="img-fluid rounded z-depth-1" %}
@@ -183,22 +175,11 @@ Once partition instances are identified, the `PartitionPortAnalyzer` class condu
   <div class="caption">
       Representation of chip module of OpenPiton 2x1 configuration. 
   </div>
-
-This analysis also serves as an optimization that helps reduce the data movement between MPI ranks during runtime. For example, it is evident from the above image that the 2 tiles are connected via wires defined in the chip module. Inherently, the data should flow from tile0 → chip → tile1, as wires are part of the chip module, and vice versa. However, we don't need the messages to pass through the chip module if the two instances are directly communicating with each other.
-
-To avoid this, the analysis recursively looks into the connections of each port of each module instance and classifies:
-
-* which ports expect data from which other ports,
-* which are for initialization (just one-time data movement), and
-* which are of type "logic" (i.e., the port is driven by some logic inside the parent module — here, the chip module).
-
-More details of this analysis are mentioned below:
+This analysis also serves as an optimization that helps to reduce the data movement between MPI ranks during runtime. For example, It is evident from the above image that the 2 tiles are connected via wires which are defined in the chip module and inherently, the data should flow from tile0 to chip to tile1 as wires are the part of chip  mmodule and vice versa but we don't need the messages to pass through the chip module in case the 2 instances are communicating with each other. So to avoid this, this analysis tries to recursively look into the connections of each port of each module instances and tries to classify which ports are expecting data from which other ports, which of them are initialisation(just one time data movement) and which are of type "logic" i.e. the port is being driven by some logic inside the parent module(here, it is chip module). More details of this analysis is mentioned below:
 
 * It traces signals through chained `assign` statements using the `resolveWireChain` function to find the ultimate source wire for any given port connection.
 * It applies a sophisticated filtering logic that intelligently prioritizes true `Output` ports as data originators over passive, passthrough `assign` statements, resulting in a cleaner data-flow graph.
-* The analyzer is capable of determining the direction of ports on any instantiated module within the parent scope, whether it is a designated partition or not, by maintaining a map of instance names to their AST definitions (`m_instanceToModulePtr`).
-
----
+* The analyzer is capable of finding the direction of ports on any instantiated module within the parent scope, whether it is a designated partition or not, by maintaining a map of instance names to their AST definitions (`m_instanceToModulePtr`).
 
 ### Global Uniqueness and Reporting
 
@@ -210,15 +191,15 @@ A fundamental requirement for any MPI-based application is that each parallel pr
 
 The assignment process is as follows:
 
-* **System Rank**: A special conceptual process named "system" is always assigned rank 0. This rank represents all non-partitioned logic, the top-level testbench, and any I/O external to the partitioned instances.
+* System Rank: A special conceptual process named "system" is always assigned rank 0. This rank represents all non-partitioned logic, the top-level testbench, and any I/O external to the partitioned instances.
 
-* **Deterministic Sorting**: To ensure that the analysis is repeatable and stable, the list of discovered partition instance names is sorted alphabetically. This critical step prevents rank assignments from changing between different runs of the tool, which is essential for consistent builds.
+* Deterministic Sorting: To ensure that the analysis is repeatable and stable, the list of discovered partition instance names is sorted alphabetically. This critical step prevents rank assignments from changing between different runs of the tool, which is essential for consistent builds.
 
-* **Sequential Assignment**: After sorting, the framework iterates through the list of partition instances and assigns them sequential, incremental ranks starting from 1 (e.g., 1, 2, 3, ...).
+* Sequential Assignment: After sorting, the framework iterates through the list of partition instances and assigns them sequential, incremental ranks starting from 1 (e.g., 1, 2, 3, ...).
 
-* **Centralized Mapping**: These assignments are stored in a map (`m_mpiRankMap`), which serves as the single source of truth for retrieving the rank of any partition instance or the system process during the analysis. The final rank for each port and its communication partners is stored directly within the Port and CommunicationPartner data structures.
+* Centralized Mapping: These assignments are stored in a map (`m_mpiRankMap`), which serves as the single source of truth for retrieving the rank of any partition instance or the system process during the analysis. The final rank for each port and its communication partners is stored directly within the Port and CommunicationPartner data structures.
 
-The reason we introduce MPI ranks here, even though ranks are a runtime assignment/property, is because by doing this we can correlate any identifier of the partitions with the rank as we control the rank assignment. More importantly, it makes the generation of MPI structures and MPI send & receive functions very straightforward.
+The reason why we are introducing MPI ranks here even if the ranks are a runtime assignment/property is because by doing this we can correlate any identifier of the partitions with the rank as we can control the rank assignment and more importantly, it makes the generation of MPI strucutres and MPI send & recieve function very straight forward.  
 
 #### **Reporting for Analysis and Automation**
 
@@ -325,68 +306,52 @@ dyn2_yummyOut_W           out        1       1          tile0      P2P          
 dyn2_yummyOut_S           out        1       1          tile0      P2P          [tile2]                   [dyn2_dNo_yummy]          [tile2]              [3]
 ```
 
-* **Machine-Readable JSON Report (`writeJsonReport`)**
+*  **Machine-Readable JSON Report (`writeJsonReport`)**
+    * This function is the primary output for the entire analysis pipeline, serializing the results into a structured JSON file named `metro_mpi/partition_report.json`.
+    * This file serves as a standardized data interchange format for subsequent code generation steps, such as creating MPI wrappers, C++ drivers, and Makefiles.
+    * The JSON structure is hierarchical, with a top-level `partitions` object containing entries for each analyzed instance. Each instance contains a detailed array of its ports.
+    * Each port object in the JSON is comprehensive, containing fields for:
+        * Basic properties: `port_name`, `direction`, `width`.
+        * Connection details: `active`, `type`, `connecting_wire`.
+        * MPI Identity: Its own `mpi_process` and `mpi_rank`.
+        * Communication Profile: The `Comm` field, indicating the communication type (`P2P`, `broadcast`, etc.).
+        * Partner List: A `with_whom_is_it_communicating` array, which contains a list of objects, each detailing a remote partner's `instance`, `port`, `mpi_process`, and `mpi_rank`.
 
-  * This function is the primary output for the entire analysis pipeline, serializing the results into a structured JSON file named `metro_mpi/partition_report.json`.
-  * This file serves as a standardized data interchange format for subsequent code generation steps, such as creating MPI wrappers, C++ drivers, and Makefiles.
-  * The JSON structure is hierarchical, with a top-level `partitions` object containing entries for each analyzed instance. Each instance contains a detailed array of its ports.
-  * Each port object in the JSON is comprehensive, containing fields for:
+    ```json
+    {
+      "partitions": {
+        "tile0": [
+          {
+            "port_name": "clk",
+            "direction": "in",
+            "width": 1,
+            "active": "Yes",
+            "type": "wire",
+            "connecting_wire": "clk_muxed",
+            "mpi_process": "tile0",
+            "mpi_rank": 1,
+            "Comm": "P2P",
+            "with_whom_is_it_communicating": [{"instance": "clock_mux", "port": "clk_muxed", "mpi_process": "system", "mpi_rank": 0}]
+          },
+          ....
 
-    * Basic properties: `port_name`, `direction`, `width`.
-    * Connection details: `active`, `type`, `connecting_wire`.
-    * MPI Identity: Its own `mpi_process` and `mpi_rank`.
-    * Communication Profile: The `Comm` field, indicating the communication type (`P2P`, `broadcast`, etc.).
-    * Partner List: A `with_whom_is_it_communicating` array, which contains a list of objects, each detailing a remote partner's `instance`, `port`, `mpi_process`, and `mpi_rank`.
-
-  ```json
-  {
-    "partitions": {
-      "tile0": [
-        {
-          "port_name": "clk",
-          "direction": "in",
-          "width": 1,
-          "active": "Yes",
-          "type": "wire",
-          "connecting_wire": "clk_muxed",
-          "mpi_process": "tile0",
-          "mpi_rank": 1,
-          "Comm": "P2P",
-          "with_whom_is_it_communicating": [
-            {
-              "instance": "clock_mux",
-              "port": "clk_muxed",
-              "mpi_process": "system",
-              "mpi_rank": 0
-            }
-          ]
-        },
-        ....
-        {
-          "port_name": "dyn0_dEo",
-          "direction": "out",
-          "width": 64,
-          "active": "Yes",
-          "type": "wire",
-          "connecting_wire": "tile_0_0_out_E_noc1_data",
-          "mpi_process": "tile0",
-          "mpi_rank": 1,
-          "Comm": "P2P",
-          "with_whom_is_it_communicating": [
-            {
-              "instance": "tile1",
-              "port": "dyn0_dataIn_W",
-              "mpi_process": "tile1",
-              "mpi_rank": 2
-            }
-          ]
-        },
-        ....
-      ],
-      "tile1": [.....]
+          {
+            "port_name": "dyn0_dEo",
+            "direction": "out",
+            "width": 64,
+            "active": "Yes",
+            "type": "wire",
+            "connecting_wire": "tile_0_0_out_E_noc1_data",
+            "mpi_process": "tile0",
+            "mpi_rank": 1,
+            "Comm": "P2P",
+            "with_whom_is_it_communicating": [{"instance": "tile1", "port": "dyn0_dataIn_W", "mpi_process": "tile1", "mpi_rank": 2}]
+          },
+          ....],
+        "tile1": [.....]
+      }
     }
-  }
-  ```
+    ```
 
 ### **Verilog Rewriting for MPI Integration**
 
@@ -502,6 +467,6 @@ The `MakefileGenerator`, being a core component of an MPI-centric tool, is desig
 
 We can see the repo that I worked on-
 
-verilator - [here](https://github.com/metro-mpi/verilator/tree/metro-mpi)
+verilator - [here](https://github.com/metro-mpi/verilator)
 
 Metro-MPI - [here](https://github.com/metro-mpi/metro-mpi-private.git)

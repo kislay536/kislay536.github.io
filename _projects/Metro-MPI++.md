@@ -118,7 +118,7 @@ The first and most critical step is to identify which parts of the hardware desi
 
 The detection algorithm operates as follows:
 
-* **Hierarchical Graph Construction**: The [visitor](https://en.wikipedia.org/wiki/Visitor_pattern) traverses the entire design Abstract Syntax Tree (AST), starting from the top-level module. It constructs a directed graph representing the module instantiation hierarchy. Each node in this graph corresponds to a module instance, and edges represent the parent-child relationship between instances. Key metadata is stored for each node, including its instance name, module name, and full hierarchical path. This graph acts as the foundation of further analysis, and everything else depends on it.
+  * **Hierarchical Graph Construction**: The [visitor](https://en.wikipedia.org/wiki/Visitor_pattern) traverses the entire design Abstract Syntax Tree (AST), starting from the top-level module. It constructs a directed graph representing the module instantiation hierarchy. Each node in this graph corresponds to a module instance, and edges represent the parent-child relationship between instances. Key metadata is stored for each node, including its instance name, module name, and full hierarchical path. This graph acts as the foundation of further analysis, and everything else depends on it.
 
   <div class="row mt-3">
       <div class="col-sm mt-3 mt-md-0">
@@ -126,10 +126,10 @@ The detection algorithm operates as follows:
       </div>
   </div>
   <div class="caption">
-      This DAG represents the  hierarchy of OpenPiton 2x2 configuration. 
+      This DAG represents the hierarchy of OpenPiton 2x2 configuration. 
   </div>
 
-* **Structural Hashing**: To identify structurally identical sub-hierarchies, a unique hash is generated for each node. This hash is not based on the instance name (e.g., `$root.core_0`) but on the hierarchical path of module types (e.g., `$root.Top.Core`). The system uses the [blake2b](https://en.wikipedia.org/wiki/BLAKE_%28hash_function%29#BLAKE2) algorithm for this purpose. This ensures that two instances, core\_0 and core\_1, both of type Core under a Top module, will produce the same hash, even though their instance paths are different.
+  * **Structural Hashing**: To identify structurally identical sub-hierarchies, a unique hash is generated for each node. This hash is not based on the instance name (e.g., `$root.core_0`) but on the hierarchical path of module types (e.g., `$root.Top.Core`). The system uses the [blake2b](https://en.wikipedia.org/wiki/BLAKE_%28hash_function%29#BLAKE2) algorithm for this purpose. This ensures that two instances, core\_0 and core\_1, both of type Core under a Top module, will produce the same hash, even though their instance paths are different.
 
   To compute these hashes, we first perform a DFS traversal. Once we reach a leaf node in the AST, we calculate the hash of its module name (not instance name). We repeat this for all nodes at the same level, generating a 128-bit hash for each name since `blake2b` takes variable-size input and produces a hash of fixed length. Then, as DFS moves to the parent node, we compute the hash of the parent module by hashing `<parent_module>.<child0_hash>.<child1_hash>.....<last_child_hash>`, again yielding a fixed-length hash.
 
@@ -144,7 +144,7 @@ The detection algorithm operates as follows:
       This is the hashed version of the raw Hierarchy Graph. The nodes with same colour represents that they have the same hash and visually it is evident that the underlying hierarchy is also the same for those nodes. 
   </div>
 
-* **Complexity Weighting or the Weight Model**: After assigning the hashes, it became easy to find duplicate hierarchies, but this didn’t tell us anything about the size of those hierarchies. So we used a weight model that assigns weights to nodes, allowing us to estimate the size of the underlying hierarchy. The current weight model is simple and works for any hardware design with a manycore CPU-like structure, but it may not work for other designs. In those cases, the weight model needs to be modified.
+  * **Complexity Weighting or the Weight Model**: After assigning the hashes, it became easy to find duplicate hierarchies, but this didn’t tell us anything about the size of those hierarchies. So we used a weight model that assigns weights to nodes, allowing us to estimate the size of the underlying hierarchy. The current weight model is simple and works for any hardware design with a manycore CPU-like structure, but it may not work for other designs. In those cases, the weight model needs to be modified.
 
   <div class="row mt-3">
       <div class="col-sm mt-3 mt-md-0">
@@ -155,10 +155,10 @@ The detection algorithm operates as follows:
       This is the hashed and weighted version of the raw Hierarchy Graph. 
   </div>
 
-* **Partition Selection (BFS)**: With the graph built and weighted, a Breadth-First Search (BFS) is used to traverse the hierarchy level by level. At each level, the algorithm groups instances by their structural hash.
+  * **Partition Selection (BFS)**: With the graph built and weighted, a Breadth-First Search (BFS) is used to traverse the hierarchy level by level. At each level, the algorithm groups instances by their structural hash.
 
-  * If a hash appears more than once at a given level, it signifies the discovery of multiple, structurally identical instances that are candidates for partitioning.
-  * To select the best candidate set, the algorithm chooses the group of instances with the highest cumulative weight. This heuristic prioritizes partitioning the most complex or significant repeating structures in the design.
+    - If a hash appears more than once at a given level, it signifies the discovery of multiple, structurally identical instances that are candidates for partitioning.
+    - To select the best candidate set, the algorithm chooses the group of instances with the highest cumulative weight. This heuristic prioritizes partitioning the most complex or significant repeating structures in the design.
 
 Once this "best" group is identified, the algorithm designates their common module type as the partition module and outputs the list of instance names to be analyzed further.
 
