@@ -120,14 +120,14 @@ The detection algorithm operates as follows:
 
   * **Hierarchical Graph Construction**: The [visitor](https://en.wikipedia.org/wiki/Visitor_pattern) traverses the entire design Abstract Syntax Tree (AST), starting from the top-level module. It constructs a directed graph representing the module instantiation hierarchy. Each node in this graph corresponds to a module instance, and edges represent the parent-child relationship between instances. Key metadata is stored for each node, including its instance name, module name, and full hierarchical path. This graph acts as the foundation of further analysis, and everything else depends on it.
 
-    <div class="row mt-3">
-        <div class="col-sm mt-3 mt-md-0">
-            {% include figure.liquid loading="eager" path="assets/img/mmpi-raw-hierarchy.png" class="img-fluid rounded z-depth-1" %}
-        </div>
-    </div>
-    <div class="caption">
-        This DAG represents the hierarchy of OpenPiton 2x2 configuration. 
-    </div>
+  <div class="row mt-3">
+      <div class="col-sm mt-3 mt-md-0">
+          {% include figure.liquid loading="eager" path="assets/img/mmpi-raw-hierarchy.png" class="img-fluid rounded z-depth-1" %}
+      </div>
+  </div>
+  <div class="caption">
+      This DAG represents the hierarchy of OpenPiton 2x2 configuration. 
+  </div>
 
   * **Structural Hashing**: To identify structurally identical sub-hierarchies, a unique hash is generated for each node. This hash is not based on the instance name (e.g., `$root.core_0`) but on the hierarchical path of module types (e.g., `$root.Top.Core`). The system uses the [blake2b](https://en.wikipedia.org/wiki/BLAKE_%28hash_function%29#BLAKE2) algorithm for this purpose. This ensures that two instances, core\_0 and core\_1, both of type Core under a Top module, will produce the same hash, even though their instance paths are different.
 
@@ -136,14 +136,14 @@ The detection algorithm operates as follows:
     So, by choosing `blake2b` we get a consistent hash for all nodes. In this way, we are ensuring that if any two nodes have the same hash, then with certainty we can assume that the hierarchy below those nodes are exactly the same or, they represent a duplicate hardware block.
 
 
-    <div class="row mt-3">
-        <div class="col-sm mt-3 mt-md-0">
-            {% include figure.liquid loading="eager" path="assets/img/mmpi-hashed-hierarchy.png" class="img-fluid rounded z-depth-1" %}
-        </div>
-    </div>
-    <div class="caption">
-        This is the hashed version of the Raw Hierarchy Graph. The nodes with the same colour represents the same hash and visually it is clear that the underlying hierarchy is also the same for those nodes. 
-    </div>
+  <div class="row mt-3">
+      <div class="col-sm mt-3 mt-md-0">
+          {% include figure.liquid loading="eager" path="assets/img/mmpi-hashed-hierarchy.png" class="img-fluid rounded z-depth-1" %}
+      </div>
+  </div>
+  <div class="caption">
+      This is the hashed version of the Raw Hierarchy Graph. The nodes with the same colour represents the same hash and visually it is clear that the underlying hierarchy is also the same for those nodes. 
+  </div>
 
   * **Complexity Weighting or the Weight Model**: After assigning the hashes, it became easy to find duplicate hierarchies, but this didn’t provide us any information about their size. Next, we used a weight model that assigns weights to nodes, allowing us to estimate the size of the underlying hierarchy. The current weight model is simple and works for any hardware design that has repeated hardware blocks organized as in the case of a manycore CPU. We have not tested the myriad of possible different topologies that exist in other designs, which may require changing the weight model or updating it to make it more general. This remains a future work. 
 
