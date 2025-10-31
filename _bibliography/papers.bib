@@ -1,25 +1,31 @@
-@inproceedings{arya2025dac,
-  bibtex_show={true},
-  abbr={DAC '25},
-  title={{``OOPS!'': Out-Of-Band Remote Power Side-Channel Attacks on Intel SGX and TDX}},
-  author={Nimish Mishra, Kislay Arya, Sarani Bhattacharya, Paritosh Saxena, Debdeep Mukhopadhyay},
-  booktitle={Proceedings of the Design Automation Conference},
+@INPROCEEDINGS{11132941,
+  author={Mishra, Nimish and Arya, Kislay and Bhattacharya, Sarani and Saxena, Paritosh and Mukhopadhyay, Debdeep},
+  booktitle={2025 62nd ACM/IEEE Design Automation Conference (DAC)}, 
+  title={“OOPS!”: Out-Of-Band Remote Power Side-Channel Attacks on Intel SGX and TDX}, 
   year={2025},
-  publisher={IEEE},
-  pdf={oob_dac.pdf},
-  html={https://62dac.conference-program.com/presentation/?id=RESEARCH1860&sess=sess153},
-  selected={true}
+  volume={},
+  number={},
+  pages={1-7},
+  keywords={Threat modeling;Protocols;Program processors;Power measurement;Filtering;Side-channel attacks;Vectors;Registers;Telemetry;Synchronization;Power Side-Channel;Intel SGX;Intel TDX},
+  doi={10.1109/DAC63849.2025.11132941}}
+
+
+@InProceedings{10.1007/978-3-032-01799-4_1,
+author="Sarkar, Tishya Sarma
+and Arya, Kislay
+and Chowdhury, Siddhartha
+and Mandal, Upasana
+and Shukla, Shubhi
+and Bhattacharya, Sarani
+and Mukhopadhyay, Debdeep",
+editor="Manulis, Mark",
+title="NETLAM: An Automated LLM Framework to Generate and Evaluate Stealthy Hardware Trojans",
+booktitle="Applied Cryptography and Network Security Workshops",
+year="2026",
+publisher="Springer Nature Switzerland",
+address="Cham",
+pages="3--21",
+abstract="Securing externally sourced hardware designs is essential to prevent adversaries from embedding hardware Trojans. Trojans are stealthy modifications that leak data or create backdoors. Existing benchmarks like Trust-Hub provide only a limited set of Trojans (106), while the possibilities are virtually infinite. To address this, we propose NETLAM, a comprehensive framework utilizing multiple LLM-based tools to generate previously undiscovered Trojans not included in Trust-Hub. The first tool converts hardware netlists into Directed Acyclic Graphs (DAGs) to identify vulnerable nets and components in digital designs. Using these insights, the second tool generates stealthy Trojan-infected versions of the original design. To evaluate the stealthiness of these Trojans, we use an LLM-based equivalence checker, where stealthier Trojans pass equivalence checks while others are detected. We evaluate NETLAM using the AES dataset from Trust-Hub consisting of 28 Trojans. We identified 5 new Trojans, with high Common Vulnerability Scoring System (CVSS) scores, demonstrating their stealthiness. To prove the efficacy of the NETLAM generated Trojans, we further utilize an open-source formal equivalence checker to perform a functional equivalence check between the golden and the NETLAM generated Trojan-infected circuits. All of the suggested Trojans pass the formal equivalence check. However, the same Trojan-infested circuits fail in the NETLAM equivalence test, thus validating the effectiveness of our proposed framework. We show that LLMs and Generative AI models, such as GPT-4o and Gemini, can enhance Trojan detection by using semantic and probabilistic analysis rather than strict logical equivalence (GitHub Repository: https://github.com/shubhishukla10/NETLAM).",
+isbn="978-3-032-01799-4"
 }
 
-@inproceedings{arya2025aihws,
-  bibtex_show={true},
-  abbr={AIHWS '25},
-  title={{NETLAM: An Automated LLM Framework to Generate and Evaluate Stealthy Hardware Trojans}},
-  author={Tishya Sarma Sarkar, Kislay Arya, Siddhartha Chowdhury, Upasana Mandal, Shubhi Shukla, Sarani Bhattacharya, Debdeep Mukhopadhyay},
-  booktitle={Proceedings of the AI Hardware Security Workshop},
-  year={2025},
-  publisher={IEEE},
-  pdf={netlam_aihws.pdf},
-  html={https://aihws2025.aisylab.com/},
-  selected={true}
-}
