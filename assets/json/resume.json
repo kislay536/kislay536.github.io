@@ -33,10 +33,7 @@
       "url": "https://www.mpi-sws.org/",
       "startDate": "2026-08-03",
       "summary": "Systems research on GPU runtimes and robotics models",
-      "highlights": [
-        "Second author on a paper (targeting MLSys 2027) on a runtime system for accelerating 3DGS-SLAM models on GPUs; preparing baselines and running experiments for the optimisation study.",
-        "Profiling and studying World Action Models widely used in robotics, to propose systems optimisations and a possible hardware accelerator design."
-      ]
+      "highlights": []
     },
     {
       "name": "NVIDIA",
