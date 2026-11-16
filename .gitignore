@@ -11,3 +11,5 @@ assets/libs/
 node_modules/
 vendor
 .idea
+# plaintext source of the password-protected explainers (only the encrypted copies in assets/explainers are published)
+_projects/explainers/
