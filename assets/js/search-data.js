@@ -89,6 +89,11 @@ ninja.data = [{
           description: "A Z3-based framework that synthesizes in-DRAM programs for a target operation, or proves that none exists.",
           section: "Projects",handler: () => {
               window.location.href = "/projects/PuMSolve/";
+            },},{id: "projects-world-action-models",
+          title: 'World Action Models',
+          description: "Interactive explainers of world-action model architectures (password protected).",
+          section: "Projects",handler: () => {
+              window.location.href = "/projects/world-action-models/";
             },},{
         id: 'social-email',
         title: 'email',
