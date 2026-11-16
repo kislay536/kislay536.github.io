@@ -7,3 +7,10 @@
 
 "Vision":
   color: "#009f36"
+
+"DAC":
+  url: https://www.dac.com/
+  color: "#00369f"
+
+"AIHWS":
+  color: "#009f36"

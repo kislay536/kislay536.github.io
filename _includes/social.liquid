@@ -48,6 +48,20 @@
       <a href="https://medium.com/@{{ social[1] }}" title="Medium"><i class="fa-brands fa-medium"></i></a>
     {% when 'orcid_id' %}
       <a href="https://orcid.org/{{ social[1] }}" title="ORCID"><i class="ai ai-orcid"></i></a>
+    {% when 'openreview_url' %}
+      <a href="{{ social[1] }}" title="OpenReview">
+        <svg viewBox="0 0 24 24" width="1em" height="1em" style="vertical-align: -0.125em; color: var(--global-text-color)">
+          <mask id="openreview-mask">
+            <rect width="24" height="24" fill="white"></rect>
+            <g fill="black" font-family="Arial, Helvetica, sans-serif" font-weight="700" text-anchor="start">
+              <text x="2.6" y="9.2" font-size="7.4">Open</text>
+              <text x="2.6" y="16.2" font-size="7.4" textLength="18.8" lengthAdjust="spacingAndGlyphs">Review</text>
+              <text x="2.6" y="21.4" font-size="5.4">.net</text>
+            </g>
+          </mask>
+          <rect width="24" height="24" rx="2.5" fill="currentColor" mask="url(#openreview-mask)"></rect>
+        </svg>
+      </a>
     {% when 'osf_id' %}
       <a href="https://osf.io/{{ social[1] }}/" title="Open Science Framework"><i class="ai ai-osf"></i></a>
     {% when 'pinterest_id' %}

@@ -198,10 +198,11 @@ ul.task-list input[type="checkbox"] {
   .more-info {
     margin-bottom: 5px;
     margin-top: 5px;
-    font-family: monospace;
+    font-size: 0.9rem;
+    overflow-wrap: break-word;
 
     p {
-      display: inline-block;
+      display: block;
       margin: 0;
     }
   }
@@ -1421,5 +1422,17 @@ figure.cover {
   /* mouse over link */
   a.cover-link:hover {
     color: #23212d !important;
+  }
+}
+
+
+// Fix low-contrast news/latest-posts text in dark mode
+.news .table {
+  --bs-table-color: var(--global-text-color);
+  --bs-table-bg: transparent;
+  color: var(--global-text-color);
+
+  th {
+    color: var(--global-text-color-light);
   }
 }
