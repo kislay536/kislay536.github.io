@@ -32,7 +32,7 @@ ninja.data = [{
           },
         },{id: "nav-cv",
           title: "cv",
-          description: "This is a description of the page. You can modify it in &#39;_pages/cv.md&#39;. You can also change or remove the top pdf download button.",
+          description: "",
           section: "Navigation",
           handler: () => {
             window.location.href = "/cv/";
@@ -67,20 +67,28 @@ ninja.data = [{
           description: "",
           section: "Books",handler: () => {
               window.location.href = "/books/white_nights/";
-            },},{id: "news-selected-for-google-summer-of-code-2025-with-the-free-and-open-source-silicon-foundation-working-on-the-project-metro-mpi",
-          title: 'Selected for Google Summer of Code 2025 with the Free and Open Source...',
-          description: "",
-          section: "News",},{id: "news-our-paper-netlam-an-automated-llm-framework-to-generate-and-evaluate-stealthy-hardware-trojans-received-the-best-workshop-paper-award-at-the-6th-acns-workshop-on-artificial-intelligence-in-hardware-security-aihws-munich-2025",
+            },},{id: "news-our-paper-netlam-an-automated-llm-framework-to-generate-and-evaluate-stealthy-hardware-trojans-received-the-best-workshop-paper-award-at-the-6th-acns-workshop-on-artificial-intelligence-in-hardware-security-aihws-munich-2025",
           title: 'Our paper NETLAM: An Automated LLM Framework to Generate and Evaluate Stealthy Hardware...',
           description: "",
-          section: "News",},{id: "news-received-an-internship-offer-from-nvidia-bangalore-for-a-hardware-role-summer-2026",
-          title: 'Received an internship offer from NVIDIA Bangalore for a hardware role (Summer 2026)....',
+          section: "News",},{id: "news-completed-google-summer-of-code-2025-with-the-free-and-open-source-silicon-foundation-working-on-the-project-metro-mpi",
+          title: 'Completed Google Summer of Code 2025 with the Free and Open Source Silicon...',
+          description: "",
+          section: "News",},{id: "news-completed-my-internship-at-nvidia-bangalore-working-on-formal-verification-and-received-a-return-offer",
+          title: 'Completed my internship at NVIDIA Bangalore, working on formal verification, and received a...',
+          description: "",
+          section: "News",},{id: "news-joined-the-max-planck-institute-for-software-systems-mpi-sws-as-a-visiting-scholar-saarbrücken",
+          title: 'Joined the Max Planck Institute for Software Systems (MPI-SWS) as a visiting scholar,...',
           description: "",
           section: "News",},{id: "projects-metro-mpi-accelerating-verilog-system-verilog-simulations",
           title: 'Metro-MPI++: Accelerating Verilog/System Verilog Simulations',
           description: "A GSoC project to automatically partition and parallelize hardware simulations in Verilator using MPI.",
           section: "Projects",handler: () => {
               window.location.href = "/projects/Metro-MPI++/";
+            },},{id: "projects-pumsolve-solver-aided-discovery-of-dram-resident-compute-kernels",
+          title: 'PuMSolve: Solver-Aided Discovery of DRAM-Resident Compute Kernels',
+          description: "A Z3-based framework that synthesizes in-DRAM programs for a target operation, or proves that none exists.",
+          section: "Projects",handler: () => {
+              window.location.href = "/projects/PuMSolve/";
             },},{
         id: 'social-email',
         title: 'email',
@@ -108,6 +116,20 @@ ninja.data = [{
         section: 'Socials',
         handler: () => {
           window.open("https://orcid.org/0009-0000-2305-5424", "_blank");
+        },
+      },{
+        id: 'social-openreview_url',
+        title: 'Openreview_url',
+        section: 'Socials',
+        handler: () => {
+          window.open("", "_blank");
+        },
+      },{
+        id: 'social-scholar',
+        title: 'Google Scholar',
+        section: 'Socials',
+        handler: () => {
+          window.open("https://scholar.google.com/citations?user=0bqkP_8AAAAJ", "_blank");
         },
       },{
       id: 'light-theme',
